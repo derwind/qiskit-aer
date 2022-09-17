@@ -658,7 +658,7 @@ reg_t AerState::allocate_qubits(uint_t num_qubits) {
 
 reg_t AerState::reallocate_qubits(uint_t num_qubits) {
   assert_not_initialized();
-  DBGLOG_DEBUG("[%s:%d] AerState::reallocate_qubits: num_of_qubits=%u\n", __FILENAME__, __LINE__, num_of_qubits);
+  DBGLOG_DEBUG("[%s:%d] AerState::reallocate_qubits: num_of_qubits=%u\n", __FILENAME__, __LINE__, num_qubits);
   num_of_qubits_ = 0;
   return allocate_qubits(num_qubits);
 };
