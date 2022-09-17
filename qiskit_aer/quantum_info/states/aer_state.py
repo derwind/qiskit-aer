@@ -69,6 +69,7 @@ class AerState:
     def __init__(self, **kwargs):
         """State that handles cpp quantum state safely"""
         self._state = _STATE.INITIALIZING
+        # construct an AER::AerState instance in the native layer
         self._native_state = AerStateWrapper()
         self._init_data = None
         self._moved_data = None
@@ -146,6 +147,7 @@ class AerState:
         self._assert_initializing()
 
         if data is None:
+            dbg_print('call _native_state.initialize')
             self._native_state.initialize()
             self._allocated()
         elif isinstance(data, np.ndarray):
@@ -161,10 +163,10 @@ class AerState:
         if len(data) != np.power(2, num_of_qubits):
             raise AerError('length of init data must be power of two')
 
+        dbg_print(f'call _native_state.initialize with {num_of_qubits=}')
         if (isinstance(data, np.ndarray) and
            self._configs['method'] == 'statevector' and
            self._native_state.initialize_statevector(num_of_qubits, data, copy)):
-            dbg_print(f'{num_of_qubits=}')
             if not copy:
                 self._init_data = data
                 AerState._in_use(data)
@@ -180,6 +182,7 @@ class AerState:
         self._last_qubit = num_of_qubits - 1
 
     def close(self):
+        dbg_print('');
         """Safely release all releated memory."""
         self._assert_allocated_or_mapped_or_moved()
         if self._state == _STATE.ALLOCATED:

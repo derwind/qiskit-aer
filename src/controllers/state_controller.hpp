@@ -731,6 +731,7 @@ AER::Vector<complex_t> AerState::move_to_vector() {
   state_->apply_op(op, ret, rng_, true);
 
   auto sv = std::move(static_cast<DataMap<SingleData, Vector<complex_t>>>(std::move(ret).data).value()["s"].value());
+  DBGLOG_DEBUG("[%s:%d] AerState::move_to_vector: call clear\n", __FILENAME__, __LINE__);
   clear();
 
   return std::move(sv);

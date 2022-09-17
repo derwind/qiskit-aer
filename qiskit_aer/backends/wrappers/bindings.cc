@@ -50,6 +50,7 @@ PYBIND11_MODULE(controller_wrappers, m) {
         return py::make_tuple(aer_ctrl, py::tuple());
     });
 
+    // construct an AER::AerState instance
     py::class_<AER::AerState> aer_state(m, "AerStateWrapper");
 
     aer_state.def(py::init<>(), "constructor");
@@ -74,8 +75,13 @@ PYBIND11_MODULE(controller_wrappers, m) {
                                                         int num_of_qubits,
                                                         py::array_t<std::complex<double>> &values,
                                                         bool copy) {
+      {
+        //py::scoped_interpreter interpreter;
+        py::print("[bindings.cc] aer_state.initialize_statevector is called");
+      }
       std::complex<double>* data_ptr = reinterpret_cast<std::complex<double>*>(values.mutable_data(0));
       state.configure("method", "statevector");
+      // call AerState::initialize_statevector@state_controller.hpp
       state.initialize_statevector(num_of_qubits, data_ptr, copy);
       return true;
     });
