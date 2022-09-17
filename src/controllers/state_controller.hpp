@@ -15,6 +15,7 @@
 #ifndef _aer_state_hpp_
 #define _aer_state_hpp_
 
+#include <cstdio>
 #include <cstdint>
 #include <complex>
 #include <string>
@@ -66,7 +67,7 @@ DISABLE_WARNING_POP
 #endif
 
 using int_t = int_fast64_t;
-using uint_t = uint_fast64_t; 
+using uint_t = uint_fast64_t;
 using complex_t = std::complex<double>;
 using complexf_t = std::complex<float>;
 using cvector_t = std::vector<complex_t>;
@@ -76,6 +77,9 @@ using cmatrixf_t = matrix<complexf_t>;
 using reg_t = std::vector<uint_t>;
 using json_t = nlohmann::json;
 using myclock_t = std::chrono::high_resolution_clock;
+
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#define DBGLOG_DEBUG(format, ...) fprintf(stderr, format, ## __VA_ARGS__)
 
 namespace AER {
 
@@ -101,15 +105,18 @@ public:
   //-----------------------------------------------------------------------
   // Constructors
   //-----------------------------------------------------------------------
-  AerState() = default;
+  //AerState() = default;
+  AerState() {
+    DBGLOG_DEBUG("[%s:%d] AerState is created\n", __FILENAME__, __LINE__);
+  }
 
   virtual ~AerState() { };
 
   //-----------------------------------------------------------------------
   // Configuration
   //-----------------------------------------------------------------------
-  
-  // set configuration. 
+
+  // set configuration.
   // All of the configuration must be done before calling any gate operations.
   virtual void configure(const std::string& key, const std::string& value);
 
@@ -396,9 +403,9 @@ bool AerState::is_gpu(bool raise_error) const {
 void AerState::configure(const std::string& _key, const std::string& _value) {
 
   std::string key = _key;
-  std::transform(key.begin(), key.end(), key.begin(), ::tolower);  
+  std::transform(key.begin(), key.end(), key.begin(), ::tolower);
   std::string value = _value;
-  std::transform(value.begin(), value.end(), value.begin(), ::tolower);  
+  std::transform(value.begin(), value.end(), value.begin(), ::tolower);
 
   bool error = false;
   if (key == "method") {
@@ -428,7 +435,7 @@ void AerState::configure(const std::string& _key, const std::string& _value) {
   static std::unordered_set<std::string> str_config = { "method", "device", "precision", "extended_stabilizer_sampling_method",
                                                         "mps_sample_measure_algorithm", "mps_log_data", "mps_swap_direction"};
   static std::unordered_set<std::string> int_config = { "seed_simulator", "max_parallel_threads", "max_memory_mb", "parallel_state_update",
-                                                        "blocking_qubits", "batched_shots_gpu_max_qubits", "statevector_parallel_threshold", 
+                                                        "blocking_qubits", "batched_shots_gpu_max_qubits", "statevector_parallel_threshold",
                                                         "statevector_sample_measure_opt", "stabilizer_max_snapshot_probabilities",
                                                         "extended_stabilizer_metropolis_mixing_time", "extended_stabilizer_norm_estimation_samples",
                                                         "extended_stabilizer_norm_estimation_repetitions", "extended_stabilizer_parallel_threshold",
@@ -651,12 +658,14 @@ reg_t AerState::allocate_qubits(uint_t num_qubits) {
 
 reg_t AerState::reallocate_qubits(uint_t num_qubits) {
   assert_not_initialized();
+  DBGLOG_DEBUG("[%s:%d] AerState::reallocate_qubits: num_of_qubits=%u\n", __FILENAME__, __LINE__, num_of_qubits);
   num_of_qubits_ = 0;
   return allocate_qubits(num_qubits);
 };
 
 reg_t AerState::initialize_statevector(uint_t num_of_qubits, complex_t* data, bool copy) {
   assert_not_initialized();
+  DBGLOG_DEBUG("[%s:%d] AerState::initialize_statevector: num_of_qubits=%u\n", __FILENAME__, __LINE__, num_of_qubits);
 #ifdef AER_MPI
   MPI_Comm_size(MPI_COMM_WORLD, &num_processes_);
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank_);
@@ -675,10 +684,10 @@ reg_t AerState::initialize_statevector(uint_t num_of_qubits, complex_t* data, bo
   state->set_config(configs_);
   state->set_distribution(num_process_per_experiment_);
   state->set_max_matrix_qubits(max_gate_qubits_);
-  
+
   if(!cache_block_pass_.enabled() || !state->multi_chunk_distribution_supported())
     block_qubits = num_of_qubits_;
-  
+
   state->allocate(num_of_qubits_, block_qubits);
   auto qv = QV::QubitVector<double>(num_of_qubits_, data, copy);
   state->initialize_qreg(num_of_qubits_);
@@ -695,6 +704,7 @@ reg_t AerState::initialize_statevector(uint_t num_of_qubits, complex_t* data, bo
 };
 
 void AerState::clear() {
+  DBGLOG_DEBUG("[%s:%d] AerState::clear\n", __FILENAME__, __LINE__);
   if (initialized_) {
     state_.reset();
     clear_ops();
@@ -1089,7 +1099,7 @@ void AerState::initialize_experiment_result() {
     last_result_.metadata.add(device_names_.at(device_), "device");
   else
     last_result_.metadata.add("CPU", "device");
-  
+
   last_result_.metadata.add(num_of_qubits_, "num_qubits");
   last_result_.header = buffer_.header;
   last_result_.shots = 1;
@@ -1114,7 +1124,7 @@ void AerState::flush_ops() {
   buffer_.set_params(false);
   transpile_ops();
   state_->apply_ops(buffer_.ops.begin(), buffer_.ops.end(), last_result_, rng_);
-  
+
   finalize_experiment_result(true, std::chrono::duration<double>(myclock_t::now() - timer_start).count());
   clear_ops();
 };
@@ -1126,7 +1136,7 @@ void AerState::clear_ops() {
 
 void AerState::transpile_ops() {
   fusion_pass_ = Transpile::Fusion();
-  
+
   fusion_pass_.set_parallelization(parallel_state_update_);
 
   if (buffer_.opset().contains(Operations::OpType::superop))
@@ -1175,5 +1185,3 @@ void AerState::transpile_ops() {
 } // end namespace AER
 //-------------------------------------------------------------------------
 #endif
-
-
