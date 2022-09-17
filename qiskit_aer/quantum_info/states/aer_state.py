@@ -12,11 +12,34 @@
 """
 State class that handles internal C++ state safely
 """
+import os
+import sys
+import inspect
 from enum import Enum
 import numpy as np
 from qiskit.providers.aer.backends.controller_wrappers import AerStateWrapper
 from ...backends.aerbackend import AerError
 
+def getframeinfo(stackIndex=2):
+    """
+    @see http://stackoverflow.com/questions/6810999/how-to-determine-file-function-and-line-number
+    @return frameInfo
+    """
+
+    stack = inspect.stack()
+    if stackIndex >= len(stack):
+        return None
+
+    callerframerecord = stack[stackIndex]
+    frame = callerframerecord[0]
+    info = inspect.getframeinfo(frame)
+
+    return info
+
+def dbg_print(msg):
+    info = getframeinfo()
+    filename = info.filename.split(os.sep)[-1]
+    print(f'[{filename}:{info.lineno} ({info.function})] {msg}')
 
 class _STATE(Enum):
     INITIALIZING = 1
@@ -141,6 +164,7 @@ class AerState:
         if (isinstance(data, np.ndarray) and
            self._configs['method'] == 'statevector' and
            self._native_state.initialize_statevector(num_of_qubits, data, copy)):
+            dbg_print(f'{num_of_qubits=}')
             if not copy:
                 self._init_data = data
                 AerState._in_use(data)
@@ -168,6 +192,7 @@ class AerState:
             self._native_state.move_to_buffer()
             AerState._not_in_use(self._init_data)
 
+        dbg_print('call _native_state.clear')
         self._native_state.clear()
         self._closed()
 
