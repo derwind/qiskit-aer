@@ -36,14 +36,14 @@ def getframeinfo(stackIndex=2):
 
     return info
 
-def dbg_print(msg):
+def dbg_print(*msg):
     info = getframeinfo()
     filename = info.filename.split(os.sep)[-1]
-    print(f'[{filename}:{info.lineno} ({info.function})] {msg}')
+    print(f'[{filename}:{info.lineno} ({info.function})]', *msg)
 
 class _STATE(Enum):
-    INITIALIZING = 1
-    ALLOCATED = 2
+    INITIALIZING = 1 # initial state
+    ALLOCATED = 2 # state after _native_state.initialize*()
     MAPPED = 3
     MOVED = 4
     CLOSED = 5
@@ -151,6 +151,7 @@ class AerState:
             self._native_state.initialize()
             self._allocated()
         elif isinstance(data, np.ndarray):
+            dbg_print('call _initialize_with_ndarray')
             self._initialize_with_ndarray(data, copy)
         else:
             raise AerError(f'unsupported init data: {data.__class__}')

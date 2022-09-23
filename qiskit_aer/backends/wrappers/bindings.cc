@@ -23,6 +23,8 @@ DISABLE_WARNING_POP
 
 #include "controllers/state_controller.hpp"
 
+#define DBGLOG_DEBUG(...) do { std::string msg = "[bindings.cc:" + std::to_string(__LINE__) + "]"; py::print(msg, ## __VA_ARGS__);} while (0)
+
 template<typename T>
 class ControllerExecutor {
 public:
@@ -75,10 +77,7 @@ PYBIND11_MODULE(controller_wrappers, m) {
                                                         int num_of_qubits,
                                                         py::array_t<std::complex<double>> &values,
                                                         bool copy) {
-      {
-        //py::scoped_interpreter interpreter;
-        py::print("[bindings.cc] aer_state.initialize_statevector is called");
-      }
+      DBGLOG_DEBUG("aer_state.initialize_statevector is called");
       std::complex<double>* data_ptr = reinterpret_cast<std::complex<double>*>(values.mutable_data(0));
       state.configure("method", "statevector");
       // call AerState::initialize_statevector@state_controller.hpp

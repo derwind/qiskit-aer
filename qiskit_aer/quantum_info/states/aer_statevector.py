@@ -22,6 +22,8 @@ from qiskit.quantum_info.states import Statevector
 from qiskit_aer import AerSimulator
 from .aer_state import AerState
 from ...backends.aerbackend import AerError
+from typing import Union
+from .aer_state import dbg_print
 
 
 class AerStatevector(Statevector):
@@ -32,7 +34,7 @@ class AerStatevector(Statevector):
     same runtime with :class:`AerSimulator`.
     """
 
-    def __init__(self, data, dims=None, **configs):
+    def __init__(self, data: Union[np.array,list,Statevector,QuantumCircuit,Instruction], dims=None, **configs):
         """
         Args:
             data (np.array or list or Statevector or QuantumCircuit or qiskit.circuit.Instruction):
@@ -53,6 +55,7 @@ class AerStatevector(Statevector):
             The ``dims`` kwarg is used to ``Statevector`` constructor.
 
         """
+        orig_data = data
         if '_aer_state' in configs:
             self._aer_state = configs.pop('_aer_state')
         else:
@@ -77,7 +80,7 @@ class AerStatevector(Statevector):
                 raise AerError(f'Input data is not supported: type={data.__class__}, data={data}')
 
             self._aer_state = aer_state
-
+        dbg_print(orig_data, data)
         super().__init__(data, dims=dims)
 
         self._result = None
