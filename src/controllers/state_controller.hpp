@@ -680,6 +680,7 @@ reg_t AerState::initialize_statevector(uint_t num_of_qubits, complex_t* data, bo
   if (precision_ != Precision::Double)
     throw std::runtime_error("only Double precision supports initialize_statevector()");
   num_of_qubits_ = num_of_qubits;
+  // auto = std::shared_ptr<T>
   auto state = std::make_shared<Statevector::State<QV::QubitVector<double>>>();
   state->set_config(configs_);
   state->set_distribution(num_process_per_experiment_);
@@ -1185,4 +1186,7 @@ void AerState::transpile_ops() {
 //-------------------------------------------------------------------------
 } // end namespace AER
 //-------------------------------------------------------------------------
+
+#undef DBGLOG_DEBUG
+
 #endif
