@@ -91,6 +91,17 @@ More sample codes are also listed.
 
 Terra also has many tests such as [test_statevector.py](https://github.com/Qiskit/qiskit-terra/tree/main/test/python/quantum_info/states) and [test_densitymatrix.py](https://github.com/Qiskit/qiskit-terra/blob/main/test/python/quantum_info/states/test_densitymatrix.py) for `DensityMatrix`. ([#1524](https://github.com/Qiskit/qiskit-aer/pull/1524#discussion_r952700690))
 
+### To run qiskit-terra's tests
+
+Required additional pip: `pip install matplotlib seaborn`
+
+```sh
+$ cd qiskit-terra/test/python/quantum_info/states
+$ git checkout 0.21.2
+$ python test_statevector.py
+$ python test_densitymatrix.py
+```
+
 ## Tips
 
 - `AerState` is intended as an internal class. ([#1524](https://github.com/Qiskit/qiskit-aer/pull/1524#discussion_r953731761))
