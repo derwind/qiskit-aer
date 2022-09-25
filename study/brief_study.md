@@ -102,6 +102,24 @@ $ python test_statevector.py
 $ python test_densitymatrix.py
 ```
 
+### To run qiskit-aer's tests
+
+After adding `to test_aer_*.py`:
+
+```python
+import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+```
+
+then run
+
+```sh
+$ cd qiskit-aer/test/terra/states
+$ python test_aer_state.py
+$ python test_aer_statevector.py
+```
+
 ## Tips
 
 - `AerState` is intended as an internal class. ([#1524](https://github.com/Qiskit/qiskit-aer/pull/1524#discussion_r953731761))
