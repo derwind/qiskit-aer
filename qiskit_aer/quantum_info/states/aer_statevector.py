@@ -80,7 +80,8 @@ class AerStatevector(Statevector):
                 raise AerError(f'Input data is not supported: type={data.__class__}, data={data}')
 
             self._aer_state = aer_state
-        dbg_print(np.round(orig_data, 2), '->', np.round(data, 2))
+        if isinstance(orig_data, np.ndarray):
+            dbg_print(np.round(orig_data, 2), '->', np.round(data, 2))
         super().__init__(data, dims=dims)
 
         self._result = None
