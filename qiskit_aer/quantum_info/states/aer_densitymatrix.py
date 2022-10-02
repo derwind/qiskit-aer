@@ -78,7 +78,7 @@ class AerDensityMatrix(DensityMatrix):
 
     @staticmethod
     def _from_ndarray(init_data, configs):
-        aer_state = AerState()
+        aer_state = AerState(method='density_matrix')
 
         options = AerSimulator._default_options()
         for config_key, config_value in configs.items():
@@ -101,7 +101,7 @@ class AerDensityMatrix(DensityMatrix):
 
     @staticmethod
     def _from_instruction(inst, init_data, configs):
-        aer_state = AerState()
+        aer_state = AerState(method='density_matrix')
 
         for config_key, config_value in configs.items():
             aer_state.configure(config_key, config_value)
