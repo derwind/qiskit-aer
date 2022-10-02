@@ -1,6 +1,7 @@
 # Ignore editor settings
 
 .vscode
+*.code-workspace
 
 # ignore jupyter notebook checkpoints
 
