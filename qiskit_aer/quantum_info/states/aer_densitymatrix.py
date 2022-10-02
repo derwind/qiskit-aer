@@ -40,11 +40,11 @@ class AerDensityMatrix(DensityMatrix):
         if '_aer_state' in configs:
             self._aer_state = configs.pop('_aer_state')
         else:
-            if 'method' not in configs:
-                configs['method'] = 'statevector'
-            elif configs['method'] not in ('statevector', 'matrix_product_state'):
-                method = configs['method']
-                raise AerError(f'Method {method} is not supported')
+            #if 'method' not in configs:
+            #    configs['method'] = 'densitymatrix'
+            #elif configs['method'] not in ('densitymatrix'):
+            #    method = configs['method']
+            #    raise AerError(f'Method {method} is not supported')
             if isinstance(data, (QuantumCircuit, Instruction)):
                 data, aer_state = AerDensityMatrix._from_instruction(data, None, configs)
             elif isinstance(data, list):
