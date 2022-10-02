@@ -565,6 +565,7 @@ void AerState::initialize() {
       throw std::runtime_error("specified method does not support non-CPU device: method=statevector");
 #endif
   } else if (method_ == Method::density_matrix) {
+    DBGLOG_DEBUG("[%s:%d] AerState::initialize: Method::density_matrix\n", __FILENAME__, __LINE__);
     if (device_ == Device::CPU)
       if (precision_ == Precision::Double)
         state_ = std::make_shared<DensityMatrix::State<QV::DensityMatrix<double>>>();
