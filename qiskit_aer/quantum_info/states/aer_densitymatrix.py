@@ -24,9 +24,48 @@ from .aer_state import AerState
 from ...backends.aerbackend import AerError
 
 class AerDensityMatrix(DensityMatrix):
+    """AerDensityMatrix class
+    This class inherits :class:`DensityMatrix`.
+    """
 
-    def __init__(self, data, dims=None):
-        pass
+    def __init__(self, data, dims=None, **configs):
+        """
+        Args:
+            configs (kwargs): configurations of :class:`AerDensityMatrix`. `_aer_state` and `method` are valid.
+        Raises:
+            AerError: if input data is not valid.
+        Additional Information:
+            The ``dims`` kwarg is used to ``AerDensityMatrix`` constructor.
+        """
+        if '_aer_state' in configs:
+            self._aer_state = configs.pop('_aer_state')
+        else:
+            if 'method' not in configs:
+                configs['method'] = 'statevector'
+            elif configs['method'] not in ('statevector', 'matrix_product_state'):
+                method = configs['method']
+                raise AerError(f'Method {method} is not supported')
+            if isinstance(data, (QuantumCircuit, Instruction)):
+                data, aer_state = AerDensityMatrix._from_instruction(data, None, configs)
+            elif isinstance(data, list):
+                data, aer_state = AerDensityMatrix._from_ndarray(np.array(data, dtype=complex),
+                                                                 configs)
+            elif isinstance(data, np.ndarray):
+                data, aer_state = AerDensityMatrix._from_ndarray(data, configs)
+            elif isinstance(data, AerDensityMatrix):
+                aer_state = data._aer_state
+                if dims is None:
+                    dims = data._op_shape._dims_l
+                data = data._data.copy()
+            else:
+                raise AerError(f'Input data is not supported: type={data.__class__}, data={data}')
+
+            self._aer_state = aer_state
+
+        super().__init__(data, dims=dims)
+
+        self._result = None
+        self._configs = configs
 
     def __copy__(self):
         return copy.deepcopy(self)
@@ -36,3 +75,51 @@ class AerDensityMatrix(DensityMatrix):
         ret._op_shape = copy.deepcopy(self._op_shape)
         ret._rng_generator = copy.deepcopy(self._rng_generator)
         return ret
+
+    @staticmethod
+    def _from_ndarray(init_data, configs):
+        aer_state = AerState()
+
+        options = AerSimulator._default_options()
+        for config_key, config_value in configs.items():
+            if options.get(config_key):
+                aer_state.configure(config_key, config_value)
+
+        if len(init_data) == 0:
+            raise AerError('initial data must be larger than 0')
+
+        num_qubits = int(np.log2(len(init_data)))
+
+        aer_state.allocate_qubits(num_qubits)
+        aer_state.initialize(data=init_data)
+
+        return aer_state.move_to_ndarray(), aer_state
+
+    @classmethod
+    def from_instruction(cls, instruction):
+        return AerDensityMatrix(instruction)
+
+    @staticmethod
+    def _from_instruction(inst, init_data, configs):
+        aer_state = AerState()
+
+        for config_key, config_value in configs.items():
+            aer_state.configure(config_key, config_value)
+
+        aer_state.allocate_qubits(inst.num_qubits)
+        #num_qubits = inst.num_qubits
+
+        if init_data is not None:
+            aer_state.initialize(data=init_data, copy=True)
+        else:
+            aer_state.initialize()
+
+        if isinstance(inst, QuantumCircuit) and inst.global_phase != 0:
+            aer_state.apply_global_phase(inst.global_phase)
+
+        #if isinstance(inst, QuantumCircuit):
+        #    AerDensityMatrix._aer_evolve_circuit(aer_state, inst, range(num_qubits))
+        #else:
+        #    AerDensityMatrix._aer_evolve_instruction(aer_state, inst, range(num_qubits))
+
+        return aer_state.move_to_ndarray(), aer_state
