@@ -78,7 +78,6 @@ class AerState:
 
         for key, value in kwargs.items():
             self.configure(key, value)
-
         if 'method' not in kwargs:
             self.configure('method', 'statevector')
 
@@ -164,10 +163,19 @@ class AerState:
         if len(data) != np.power(2, num_of_qubits):
             raise AerError('length of init data must be power of two')
 
-        dbg_print(f'call _native_state.initialize with {num_of_qubits=}')
+        dbg_print(f'call _native_state.initialize* with {num_of_qubits=}')
         if (isinstance(data, np.ndarray) and
            self._configs['method'] == 'statevector' and
            self._native_state.initialize_statevector(num_of_qubits, data, copy)):
+            if not copy:
+                self._init_data = data
+                AerState._in_use(data)
+                self._mapped()
+            else:
+                self._allocated()
+        elif (isinstance(data, np.ndarray) and
+           self._configs['method'] == 'density_matrix' and
+           self._native_state.initialize_density_matrix(num_of_qubits, data, copy)):
             if not copy:
                 self._init_data = data
                 AerState._in_use(data)

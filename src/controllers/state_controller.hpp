@@ -176,6 +176,8 @@ public:
   // given data will not be freed in this class
   virtual reg_t initialize_statevector(uint_t num_qubits, complex_t* data, bool copy);
 
+  virtual reg_t initialize_density_matrix(uint_t num_of_qubits, complex_t* data, bool copy);
+
   // Release internal statevector
   // The caller must free the returned pointer
   virtual AER::Vector<complex_t> move_to_vector();
@@ -695,6 +697,48 @@ reg_t AerState::initialize_statevector(uint_t num_of_qubits, complex_t* data, bo
   state->initialize_qreg(num_of_qubits_);
   state->initialize_creg(num_of_qubits_, num_of_qubits_);
   state->initialize_statevector(num_of_qubits_, std::move(qv));
+  state_ = state;
+  rng_.set_seed(seed_);
+  initialized_ = true;
+  reg_t ret;
+  ret.reserve(num_of_qubits);
+  for (auto i = 0; i < num_of_qubits; ++i)
+    ret.push_back(i);
+  return ret;
+};
+
+reg_t AerState::initialize_density_matrix(uint_t num_of_qubits, complex_t* data, bool copy) {
+  assert_not_initialized();
+  DBGLOG_DEBUG("[%s:%d] AerState::initialize_density_matrix: num_of_qubits=%u\n", __FILENAME__, __LINE__, num_of_qubits);
+#ifdef AER_MPI
+  MPI_Comm_size(MPI_COMM_WORLD, &num_processes_);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank_);
+  num_process_per_experiment_ = num_processes_;
+#endif
+  uint_t block_qubits = cache_block_qubits_;
+  cache_block_pass_.set_num_processes(num_process_per_experiment_);
+  cache_block_pass_.set_config(configs_);
+
+  if (device_ != Device::CPU)
+    throw std::runtime_error("only CPU device supports initialize_density_matrix()");
+  if (precision_ != Precision::Double)
+    throw std::runtime_error("only Double precision supports initialize_density_matrix()");
+  num_of_qubits_ = num_of_qubits;
+  // auto = std::shared_ptr<T>
+  auto state = std::make_shared<DensityMatrix::State<QV::QubitVector<double>>>();
+  state->set_config(configs_);
+  state->set_distribution(num_process_per_experiment_);
+  state->set_max_matrix_qubits(max_gate_qubits_);
+
+  if(!cache_block_pass_.enabled() || !state->multi_chunk_distribution_supported())
+    block_qubits = num_of_qubits_;
+
+  state->allocate(num_of_qubits_, block_qubits);
+  auto qv = QV::QubitVector<double>(num_of_qubits_, data, copy);
+  state->initialize_qreg(num_of_qubits_);
+  state->initialize_creg(num_of_qubits_, num_of_qubits_);
+  // doesn't exist
+  //state->initialize_density_matrix(num_of_qubits_, std::move(qv));
   state_ = state;
   rng_.set_seed(seed_);
   initialized_ = true;
