@@ -48,10 +48,19 @@ class AerDensityMatrix(DensityMatrix):
             if isinstance(data, (QuantumCircuit, Instruction)):
                 data, aer_state = AerDensityMatrix._from_instruction(data, None, configs)
             elif isinstance(data, list):
-                data, aer_state = AerDensityMatrix._from_ndarray(np.array(data, dtype=complex),
-                                                                 configs)
-            elif isinstance(data, np.ndarray):
+                # XXX: Disguise it as if it were a state vector
+                num_qubits = int(np.log2(len(data)))
+                data = np.array(data, dtype=complex).ravel()
                 data, aer_state = AerDensityMatrix._from_ndarray(data, configs)
+                # XXX: restore original shape
+                data = data.reshape(-1, 2**num_qubits)
+            elif isinstance(data, np.ndarray):
+                # XXX: Disguise it as if it were a state vector
+                num_qubits = int(np.log2(len(data)))
+                data = data.ravel()
+                data, aer_state = AerDensityMatrix._from_ndarray(data, configs)
+                # XXX: restore original shape
+                data = data.reshape(-1, 2**num_qubits)
             elif isinstance(data, AerDensityMatrix):
                 aer_state = data._aer_state
                 if dims is None:
@@ -78,7 +87,8 @@ class AerDensityMatrix(DensityMatrix):
 
     @staticmethod
     def _from_ndarray(init_data, configs):
-        aer_state = AerState(method='density_matrix')
+        #aer_state = AerState(method='density_matrix')
+        aer_state = AerState()
 
         options = AerSimulator._default_options()
         for config_key, config_value in configs.items():
@@ -101,7 +111,8 @@ class AerDensityMatrix(DensityMatrix):
 
     @staticmethod
     def _from_instruction(inst, init_data, configs):
-        aer_state = AerState(method='density_matrix')
+        #aer_state = AerState(method='density_matrix')
+        aer_state = AerState()
 
         for config_key, config_value in configs.items():
             aer_state.configure(config_key, config_value)
