@@ -76,5 +76,21 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
             self.assertEqual(state.dims(), (2, 2, 2))
             self.assertEqual(state.num_qubits, 3)
 
+    def test_init_array(self):
+        """Test initialization from array."""
+        rho = self.rand_rho(3)
+        state = AerDensityMatrix(rho)
+        assert_allclose(state.data, rho)
+        self.assertEqual(state.dim, 3)
+        self.assertEqual(state.dims(), (3,))
+        self.assertIsNone(state.num_qubits)
+
+        rho = self.rand_rho(2 * 3 * 4)
+        state = AerDensityMatrix(rho, dims=[2, 3, 4])
+        assert_allclose(state.data, rho)
+        self.assertEqual(state.dim, 2 * 3 * 4)
+        self.assertEqual(state.dims(), (2, 3, 4))
+        self.assertIsNone(state.num_qubits)
+
 if __name__ == '__main__':
     unittest.main()
