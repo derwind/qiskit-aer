@@ -22,12 +22,13 @@ import logging
 from itertools import permutations
 from ddt import ddt, data
 from numpy.testing import assert_allclose
+from numpy.random import default_rng
 
 from qiskit import transpile
 from qiskit.exceptions import QiskitError
 from qiskit.circuit import QuantumCircuit, QuantumRegister
 from qiskit.providers.basicaer import QasmSimulatorPy
-from qiskit.quantum_info.random import random_unitary, random_statevector, random_pauli
+from qiskit.quantum_info.random import random_unitary, random_pauli
 from qiskit.quantum_info.states import Statevector
 from qiskit.circuit.library import QuantumVolume
 from qiskit.providers.aer import AerSimulator
@@ -43,6 +44,33 @@ from qiskit_aer.quantum_info.states import AerStatevector
 
 
 logger = logging.getLogger(__name__)
+
+def random_statevector(dims, seed=None):
+    """Generator a random Statevector.
+    The statevector is sampled from the uniform (Haar) measure.
+    Args:
+        dims (int or tuple): the dimensions of the state.
+        seed (int or np.random.Generator): Optional. Set a fixed seed or
+                                           generator for RNG.
+    Returns:
+        Statevector: the random statevector.
+    """
+    if seed is None:
+        rng = np.random.default_rng()
+    elif isinstance(seed, np.random.Generator):
+        rng = seed
+    else:
+        rng = default_rng(seed)
+
+    dim = np.product(dims)
+
+    # Random array over interval (0, 1]
+    x = rng.random(dim)
+    x += x == 0
+    x = -np.log(x)
+    sumx = sum(x)
+    phases = rng.random(dim) * 2.0 * np.pi
+    return AerStatevector(np.sqrt(x / sumx) * np.exp(1j * phases), dims=dims)
 
 @ddt
 class TestAerStatevector(common.QiskitAerTestCase):
