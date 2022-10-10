@@ -20,6 +20,7 @@ from qiskit.circuit import QuantumCircuit, Instruction
 from qiskit.quantum_info.states import DensityMatrix
 
 from qiskit_aer import AerSimulator
+from .aer_statevector import AerStatevector
 from .aer_state import AerState
 from ...backends.aerbackend import AerError
 
@@ -66,6 +67,9 @@ class AerDensityMatrix(DensityMatrix):
                 if dims is None:
                     dims = data._op_shape._dims_l
                 data = data._data.copy()
+            # XXX
+            #elif isinstance(data, AerStatevector):
+            #    pass
             else:
                 raise AerError(f'Input data is not supported: type={data.__class__}, data={data}')
 
