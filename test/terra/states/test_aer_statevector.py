@@ -1071,6 +1071,7 @@ class TestAerStatevector(common.QiskitAerTestCase):
         seed = 1020
         op = Pauli(pauli)
         state = random_statevector(2**op.num_qubits, seed=seed)
+        state = AerStatevector(state.data)
         target = state.expectation_value(op.to_matrix())
         expval = state.expectation_value(op)
         self.assertAlmostEqual(expval, target)
@@ -1081,6 +1082,7 @@ class TestAerStatevector(common.QiskitAerTestCase):
         seed = 1020
         op = random_pauli(2, seed=seed)
         state = random_statevector(2**3, seed=seed)
+        state = AerStatevector(state.data)
         target = state.expectation_value(op.to_matrix(), qubits)
         expval = state.expectation_value(op, qubits)
         self.assertAlmostEqual(expval, target)
