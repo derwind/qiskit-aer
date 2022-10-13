@@ -176,7 +176,7 @@ public:
   // given data will not be freed in this class
   virtual reg_t initialize_statevector(uint_t num_qubits, complex_t* data, bool copy);
 
-  virtual reg_t initialize_density_matrix(uint_t num_of_qubits, complex_t* data, bool copy);
+  //virtual reg_t initialize_density_matrix(uint_t num_of_qubits, complex_t* data, bool copy);
 
   // Release internal statevector
   // The caller must free the returned pointer
@@ -712,6 +712,7 @@ reg_t AerState::initialize_statevector(uint_t num_of_qubits, complex_t* data, bo
   return ret;
 };
 
+/*
 reg_t AerState::initialize_density_matrix(uint_t num_of_qubits, complex_t* data, bool copy) {
   assert_not_initialized();
   DBGLOG_DEBUG("[%s:%d] AerState::initialize_density_matrix: num_of_qubits=%u\n", __FILENAME__, __LINE__, num_of_qubits);
@@ -753,6 +754,7 @@ reg_t AerState::initialize_density_matrix(uint_t num_of_qubits, complex_t* data,
     ret.push_back(i);
   return ret;
 };
+*/
 
 void AerState::clear() {
   DBGLOG_DEBUG("[%s:%d] AerState::clear\n", __FILENAME__, __LINE__);
