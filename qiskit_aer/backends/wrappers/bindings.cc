@@ -84,19 +84,6 @@ PYBIND11_MODULE(controller_wrappers, m) {
       state.initialize_statevector(num_of_qubits, data_ptr, copy);
       return true;
     });
-    /*
-    aer_state.def("initialize_density_matrix", [aer_state](AER::AerState &state,
-                                                           int num_of_qubits,
-                                                           py::array_t<std::complex<double>> &values,
-                                                           bool copy) {
-      DBGLOG_DEBUG("aer_state.initialize_density_matrix is called");
-      std::complex<double>* data_ptr = reinterpret_cast<std::complex<double>*>(values.mutable_data(0));
-      state.configure("method", "density_matrix");
-      // call AerState::initialize_statevector@state_controller.hpp
-      state.initialize_density_matrix(num_of_qubits, data_ptr, copy);
-      return true;
-    });
-    */
 
     aer_state.def("initialize_densitymatrix", [aer_state](AER::AerState &state,
                                                         int num_of_qubits,
