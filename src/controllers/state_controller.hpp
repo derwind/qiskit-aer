@@ -148,6 +148,8 @@ public:
   // is permitted.
   virtual bool is_initialized() const { return initialized_; };
 
+  virtual bool is_matrix() const { return method_ == Method::density_matrix; };
+
   // Allocate qubits and return a list of qubit identifiers, which start
   // `0` with incrementation `+1`.
   virtual reg_t allocate_qubits(uint_t num_qubits);
@@ -176,11 +178,16 @@ public:
   // given data will not be freed in this class
   virtual reg_t initialize_statevector(uint_t num_qubits, complex_t* data, bool copy);
 
-  //virtual reg_t initialize_density_matrix(uint_t num_of_qubits, complex_t* data, bool copy);
+  // Allocate qubits with inputted complex array
+  // method must be densitymatrix and the length of the array must be 4^{num_qubits}
+  // given data will not be freed in this class
+  virtual reg_t initialize_densitymatrix(uint_t num_qubits, complex_t* data, bool copy);
 
-  // Release internal statevector
-  // The caller must free the returned pointer
+  // Release internal statevector as a vector
   virtual AER::Vector<complex_t> move_to_vector();
+
+  // Release internal statevector as a matrix
+  virtual matrix<complex_t> move_to_matrix();
 
   //-----------------------------------------------------------------------
   // Apply initialization
@@ -376,9 +383,11 @@ private:
 
   Transpile::Fusion fusion_pass_;
 
+#ifdef AER_MPI
   // process information (MPI)
   int myrank_ = 0;
   int num_processes_ = 1;
+#endif
   int num_process_per_experiment_ = 1;
 
   uint_t cache_block_qubits_ = 0;
@@ -712,49 +721,40 @@ reg_t AerState::initialize_statevector(uint_t num_of_qubits, complex_t* data, bo
   return ret;
 };
 
-/*
-reg_t AerState::initialize_density_matrix(uint_t num_of_qubits, complex_t* data, bool copy) {
+reg_t AerState::initialize_densitymatrix(uint_t num_of_qubits, complex_t* data, bool copy) {
   assert_not_initialized();
-  DBGLOG_DEBUG("[%s:%d] AerState::initialize_density_matrix: num_of_qubits=%u\n", __FILENAME__, __LINE__, num_of_qubits);
-#ifdef AER_MPI
-  MPI_Comm_size(MPI_COMM_WORLD, &num_processes_);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myrank_);
-  num_process_per_experiment_ = num_processes_;
-#endif
-  uint_t block_qubits = cache_block_qubits_;
-  cache_block_pass_.set_num_processes(num_process_per_experiment_);
-  cache_block_pass_.set_config(configs_);
+
+  num_of_qubits_ = num_of_qubits;
+  uint_t data_size = (1ULL << num_of_qubits_ * 2);
+
+  initialize_state_controller();
 
   if (device_ != Device::CPU)
-    throw std::runtime_error("only CPU device supports initialize_density_matrix()");
+    throw std::runtime_error("only CPU device supports initialize_densitymatrix()");
   if (precision_ != Precision::Double)
-    throw std::runtime_error("only Double precision supports initialize_density_matrix()");
-  num_of_qubits_ = num_of_qubits;
-  // auto = std::shared_ptr<T>
-  auto state = std::make_shared<DensityMatrix::State<QV::QubitVector<double>>>();
-  state->set_config(configs_);
-  state->set_distribution(num_process_per_experiment_);
-  state->set_max_matrix_qubits(max_gate_qubits_);
+    throw std::runtime_error("only Double precision supports initialize_densitymatrix()");
 
-  if(!cache_block_pass_.enabled() || !state->multi_chunk_distribution_supported())
-    block_qubits = num_of_qubits_;
+  auto state = std::make_shared<DensityMatrix::State<QV::DensityMatrix<double>>>();
 
-  state->allocate(num_of_qubits_, block_qubits);
-  auto qv = QV::QubitVector<double>(num_of_qubits_, data, copy);
-  state->initialize_qreg(num_of_qubits_);
+  initialize_qreg_state(state);
+
+  auto vec = copy? AER::Vector<complex_t>::copy_from_buffer(data_size, data)
+                 : AER::Vector<complex_t>::move_from_buffer(data_size, data);
+
+  auto dm = QV::DensityMatrix<double>();
+  dm.move_from_vector(std::move(vec));
+
+  state->initialize_qreg(num_of_qubits_, std::move(dm));
   state->initialize_creg(num_of_qubits_, num_of_qubits_);
-  // doesn't exist
-  //state->initialize_density_matrix(num_of_qubits_, std::move(qv));
-  state_ = state;
-  rng_.set_seed(seed_);
+
   initialized_ = true;
+
   reg_t ret;
   ret.reserve(num_of_qubits);
   for (auto i = 0; i < num_of_qubits; ++i)
     ret.push_back(i);
   return ret;
 };
-*/
 
 void AerState::clear() {
   DBGLOG_DEBUG("[%s:%d] AerState::clear\n", __FILENAME__, __LINE__);
@@ -772,9 +772,15 @@ AER::Vector<complex_t> AerState::move_to_vector() {
   flush_ops();
 
   Operations::Op op;
-  op.type = Operations::OpType::save_statevec;
-  op.name = "save_statevec";
-  op.qubits.reserve(num_of_qubits_);
+  if (method_ == Method::statevector) {
+    op.type = Operations::OpType::save_statevec;
+    op.name = "save_statevec";
+  } else if (method_ == Method::density_matrix) {
+    op.type = Operations::OpType::save_state;
+    op.name = "save_density_matrix";
+  } else {
+    throw std::runtime_error("move_to_vector() supports only statevector or density_matrix methods");
+  }
   for (auto i = 0; i < num_of_qubits_; ++i)
     op.qubits.push_back(i);
   op.string_params.push_back("s");
@@ -783,12 +789,74 @@ AER::Vector<complex_t> AerState::move_to_vector() {
   ExperimentResult ret;
   state_->apply_op(op, ret, rng_, true);
 
-  auto sv = std::move(static_cast<DataMap<SingleData, Vector<complex_t>>>(std::move(ret).data).value()["s"].value());
-  DBGLOG_DEBUG("[%s:%d] AerState::move_to_vector: call clear\n", __FILENAME__, __LINE__);
-  clear();
-
-  return std::move(sv);
+  if (method_ == Method::statevector) {
+    auto vec = std::move(static_cast<DataMap<SingleData, Vector<complex_t>>>(std::move(ret).data).value()["s"].value());
+    DBGLOG_DEBUG("[%s:%d] AerState::move_to_vector (statevector): call clear\n", __FILENAME__, __LINE__);
+    clear();
+    return std::move(vec);
+  } else if (method_ == Method::density_matrix) {
+    auto mat = std::move(static_cast<DataMap<AverageData, matrix<complex_t>, 1>>(std::move(ret).data).value()["s"].value());
+    auto vec = Vector<complex_t>::move_from_buffer(mat.GetColumns() * mat.GetRows(), mat.move_to_buffer());
+    DBGLOG_DEBUG("[%s:%d] AerState::move_to_vector (density_matrix): call clear\n", __FILENAME__, __LINE__);
+    clear();
+    return std::move(vec);
+  } else {
+    throw std::runtime_error("move_to_vector() supports only statevector or density_matrix methods");
+  }
 };
+
+matrix<complex_t> AerState::move_to_matrix() {
+  assert_initialized();
+
+  flush_ops();
+
+  Operations::Op op;
+  if (method_ == Method::statevector) {
+    op.type = Operations::OpType::save_statevec;
+    op.name = "save_statevec";
+  } else if (method_ == Method::density_matrix) {
+    op.type = Operations::OpType::save_state;
+    op.name = "save_density_matrix";
+  } else {
+    throw std::runtime_error("move_to_vector() supports only statevector or density_matrix methods");
+  }
+  for (auto i = 0; i < num_of_qubits_; ++i)
+    op.qubits.push_back(i);
+  op.string_params.push_back("s");
+  op.save_type = Operations::DataSubType::single;
+
+  ExperimentResult ret;
+  state_->apply_op(op, ret, rng_, true);
+
+  if (method_ == Method::statevector) {
+    auto vec = std::move(
+                std::move(
+                  std::move(
+                    static_cast<DataMap<SingleData, Vector<complex_t>>>(
+                      std::move(ret).data
+                    )
+                  ).value()
+                )["s"].value()
+              );
+    clear();
+    return matrix<complex_t>((1ULL << num_of_qubits_), 1, vec.move_to_buffer());
+  } else if (method_ == Method::density_matrix) {
+    auto mat = std::move(
+                std::move(
+                  std::move(
+                    static_cast<DataMap<AverageData, matrix<complex_t>, 1>>(
+                      std::move(ret).data
+                    )
+                  ).value()
+                )["s"].value()
+              );
+    clear();
+    return std::move(mat);
+  } else {
+    throw std::runtime_error("move_to_vector() supports only statevector or density_matrix methods");
+  }
+};
+
 
 //-----------------------------------------------------------------------
 // Apply Initialization
