@@ -815,7 +815,7 @@ matrix<complex_t> AerState::move_to_matrix() {
     op.type = Operations::OpType::save_statevec;
     op.name = "save_statevec";
   } else if (method_ == Method::density_matrix) {
-    op.type = Operations::OpType::save_state;
+    op.type = Operations::OpType::save_state; // XXX: save_densmat??
     op.name = "save_density_matrix";
   } else {
     throw std::runtime_error("move_to_vector() supports only statevector or density_matrix methods");

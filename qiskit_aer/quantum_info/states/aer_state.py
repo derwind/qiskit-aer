@@ -166,15 +166,17 @@ class AerState:
         if len(data) != np.power(2, num_of_qubits):
             raise AerError('length of init data must be power of two')
 
-        dbg_print(f'call _native_state.initialize* with {num_of_qubits=}')
         init = False
         if (isinstance(data, np.ndarray)):
             if self._configs['method'] == 'statevector':
+                dbg_print(f'call _native_state.initialize_statevector with {num_of_qubits=}')
                 init = self._native_state.initialize_statevector(num_of_qubits, data, copy)
             elif self._configs['method'] == 'density_matrix':
+                dbg_print(f'call _native_state.initialize_densitymatrix with {num_of_qubits=}')
                 if data.shape != (len(data), len(data)):
                     raise AerError('shape of init data must be a pair of power of two')
                 init = self._native_state.initialize_densitymatrix(num_of_qubits, data, copy)
+                dbg_print(f'called _native_state.initialize_densitymatrix with {type(init)=} {init=}')
 
         if init:
             if not copy:
@@ -221,6 +223,7 @@ class AerState:
     def move_to_ndarray(self):
         """move memory to ndarray if it is allocated, otherwise return mapped ndarray."""
         self._assert_allocated_or_mapped_or_moved()
+        dbg_print(f'{self._state=}')
 
         if self._state == _STATE.MAPPED:
             ret = self._init_data
@@ -229,6 +232,7 @@ class AerState:
         else:
             if self._configs['method'] == 'density_matrix':
                 self._moved_data = self._native_state.move_to_matrix()
+                dbg_print(f'{self._moved_data=}')
             else:
                 self._moved_data = self._native_state.move_to_vector()
             ret = self._moved_data

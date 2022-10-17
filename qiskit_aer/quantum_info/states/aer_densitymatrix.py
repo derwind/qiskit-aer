@@ -41,27 +41,18 @@ class AerDensityMatrix(DensityMatrix):
         if '_aer_state' in configs:
             self._aer_state = configs.pop('_aer_state')
         else:
-            #if 'method' not in configs:
-            #    configs['method'] = 'densitymatrix'
-            #elif configs['method'] not in ('densitymatrix'):
-            #    method = configs['method']
-            #    raise AerError(f'Method {method} is not supported')
+            if 'method' not in configs:
+                configs['method'] = 'density_matrix'
+            elif configs['method'] not in ('density_matrix'):
+                method = configs['method']
+                raise AerError(f'Method {method} is not supported')
             if isinstance(data, (QuantumCircuit, Instruction)):
                 data, aer_state = AerDensityMatrix._from_instruction(data, None, configs)
             elif isinstance(data, list):
-                # XXX: Disguise it as if it were a state vector
-                num_qubits = int(np.log2(len(data)))
-                data = np.array(data, dtype=complex).ravel()
-                data, aer_state = AerDensityMatrix._from_ndarray(data, configs)
-                # XXX: restore original shape
-                data = data.reshape(-1, 2**num_qubits)
+                data, aer_state = AerDensityMatrix._from_ndarray(np.array(data, dtype=complex),
+                                                                 configs)
             elif isinstance(data, np.ndarray):
-                # XXX: Disguise it as if it were a state vector
-                num_qubits = int(np.log2(len(data)))
-                data = data.ravel()
                 data, aer_state = AerDensityMatrix._from_ndarray(data, configs)
-                # XXX: restore original shape
-                data = data.reshape(-1, 2**num_qubits)
             elif isinstance(data, AerDensityMatrix):
                 aer_state = data._aer_state
                 if dims is None:
@@ -91,8 +82,7 @@ class AerDensityMatrix(DensityMatrix):
 
     @staticmethod
     def _from_ndarray(init_data, configs):
-        #aer_state = AerState(method='density_matrix')
-        aer_state = AerState()
+        aer_state = AerState(method='density_matrix')
 
         options = AerSimulator._default_options()
         for config_key, config_value in configs.items():
@@ -102,6 +92,7 @@ class AerDensityMatrix(DensityMatrix):
         if len(init_data) == 0:
             raise AerError('initial data must be larger than 0')
 
+        # Currently handle neither qutrit nor qudit
         num_qubits = int(np.log2(len(init_data)))
 
         aer_state.allocate_qubits(num_qubits)
@@ -115,8 +106,7 @@ class AerDensityMatrix(DensityMatrix):
 
     @staticmethod
     def _from_instruction(inst, init_data, configs):
-        #aer_state = AerState(method='density_matrix')
-        aer_state = AerState()
+        aer_state = AerState(method='density_matrix')
 
         for config_key, config_value in configs.items():
             aer_state.configure(config_key, config_value)
