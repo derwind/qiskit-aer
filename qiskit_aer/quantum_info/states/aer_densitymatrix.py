@@ -13,6 +13,8 @@
 """
 DensityMatrix quantum state class.
 """
+import os ###
+import inspect ###
 import copy
 import numpy as np
 
@@ -23,6 +25,27 @@ from qiskit_aer import AerSimulator
 from .aer_statevector import AerStatevector
 from .aer_state import AerState
 from ...backends.aerbackend import AerError
+
+def getframeinfo(stackIndex=2):
+    """
+    @see http://stackoverflow.com/questions/6810999/how-to-determine-file-function-and-line-number
+    @return frameInfo
+    """
+
+    stack = inspect.stack()
+    if stackIndex >= len(stack):
+        return None
+
+    callerframerecord = stack[stackIndex]
+    frame = callerframerecord[0]
+    info = inspect.getframeinfo(frame)
+
+    return info
+
+def dbg_print(*msg):
+    info = getframeinfo()
+    filename = info.filename.split(os.sep)[-1]
+    print(f'[{filename}:{info.lineno} ({info.function})]', *msg)
 
 class AerDensityMatrix(DensityMatrix):
     """AerDensityMatrix class
@@ -49,31 +72,21 @@ class AerDensityMatrix(DensityMatrix):
             if isinstance(data, (QuantumCircuit, Instruction)):
                 data, aer_state = AerDensityMatrix._from_instruction(data, None, configs)
             elif isinstance(data, list):
-                # XXX: Disguise it as if it were a state vector
-                num_qubits = int(np.log2(len(data)))
-                data = np.array(data, dtype=complex).ravel()
                 data, aer_state = AerDensityMatrix._from_ndarray(data, configs)
-                # XXX: restore original shape
-                data = data.reshape(-1, 2**num_qubits)
             elif isinstance(data, np.ndarray):
-                # XXX: Disguise it as if it were a state vector
-                num_qubits = int(np.log2(len(data)))
-                data = data.ravel()
                 data, aer_state = AerDensityMatrix._from_ndarray(data, configs)
-                # XXX: restore original shape
-                data = data.reshape(-1, 2**num_qubits)
             elif isinstance(data, AerDensityMatrix):
                 aer_state = data._aer_state
                 if dims is None:
                     dims = data._op_shape._dims_l
                 data = data._data.copy()
-            # XXX
-            #elif isinstance(data, AerStatevector):
-            #    pass
+            elif isinstance(data, AerStatevector):
+                data, aer_state = AerDensityMatrix._from_ndarray(data.data, configs)
             else:
                 raise AerError(f'Input data is not supported: type={data.__class__}, data={data}')
 
             self._aer_state = aer_state
+            dbg_print(self._aer_state.configuration())
 
         super().__init__(data, dims=dims)
 
@@ -91,8 +104,7 @@ class AerDensityMatrix(DensityMatrix):
 
     @staticmethod
     def _from_ndarray(init_data, configs):
-        #aer_state = AerState(method='density_matrix')
-        aer_state = AerState()
+        aer_state = AerState(method='density_matrix')
 
         options = AerSimulator._default_options()
         for config_key, config_value in configs.items():
