@@ -13,6 +13,8 @@
 Integration Tests for AerState
 """
 
+import os
+import sys
 import unittest
 from math import pi
 import numpy as np
@@ -22,6 +24,7 @@ from qiskit.quantum_info.random import random_unitary
 from qiskit.quantum_info.states.random import random_statevector
 from qiskit_aer import AerSimulator
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from test.terra import common
 from qiskit_aer.aererror import AerError
 from qiskit_aer.backends.controller_wrappers import AerStateWrapper

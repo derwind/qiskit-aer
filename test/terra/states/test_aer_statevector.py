@@ -13,6 +13,8 @@
 Integration Tests for AerStatevector
 """
 
+import os
+import sys
 import unittest
 from math import pi
 import numpy as np
@@ -34,6 +36,7 @@ from qiskit.quantum_info.operators.symplectic import Pauli, SparsePauliOp
 from qiskit.quantum_info.operators.predicates import matrix_equal
 from qiskit.visualization.state_visualization import numbers_to_latex_terms, state_to_latex
 from qiskit.circuit.library import QFT, HGate
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from test.terra import common
 from qiskit_aer.aererror import AerError
 from qiskit_aer.quantum_info.states import AerStatevector
@@ -118,7 +121,7 @@ class TestAerStatevector(common.QiskitAerTestCase):
 
         for pa1, pa2 in zip(state1, state2):
             self.assertAlmostEqual(pa1, pa2)
-        
+
         self.assertNotEqual(id(state1._data), id(state2._data))
 
 
