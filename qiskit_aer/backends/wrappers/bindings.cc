@@ -102,7 +102,7 @@ PYBIND11_MODULE(controller_wrappers, m) {
 
     aer_state.def("move_to_matrix", [aer_state](AER::AerState &state) {
       auto mat = state.move_to_matrix();
-      auto ret = AerToPy::to_numpy(std::move(mat));
+      auto ret = AerToPy::to_numpy_c(std::move(mat));
       return ret;
     });
 
