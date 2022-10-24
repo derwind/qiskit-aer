@@ -80,8 +80,19 @@ class AerDensityMatrix(DensityMatrix):
                 if dims is None:
                     dims = data._op_shape._dims_l
                 data = data._data.copy()
-            elif isinstance(data, AerStatevector):
-                data, aer_state = AerDensityMatrix._from_ndarray(data.data, configs)
+            elif hasattr(data, 'to_operator'):
+                # If the data object has a 'to_operator' attribute this is given
+                # higher preference than the 'to_matrix' method for initializing
+                # an Operator object.
+                op = data.to_operator()
+                data, aer_state = AerDensityMatrix._from_ndarray(op.data, configs)
+                if dims is None:
+                    dims = op.output_dims()
+            elif hasattr(data, 'to_matrix'):
+                # If no 'to_operator' attribute exists we next look for a
+                # 'to_matrix' attribute to a matrix that will be cast into
+                # a complex numpy matrix.
+                data, aer_state = AerDensityMatrix._from_ndarray(np.asarray(data.to_matrix(), dtype=complex), configs)
             else:
                 raise AerError(f'Input data is not supported: type={data.__class__}, data={data}')
 
