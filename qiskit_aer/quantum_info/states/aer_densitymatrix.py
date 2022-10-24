@@ -86,7 +86,6 @@ class AerDensityMatrix(DensityMatrix):
                 raise AerError(f'Input data is not supported: type={data.__class__}, data={data}')
 
             self._aer_state = aer_state
-            dbg_print(self._aer_state.configuration())
 
         super().__init__(data, dims=dims)
 
