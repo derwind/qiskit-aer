@@ -137,14 +137,13 @@ class AerDensityMatrix(DensityMatrix):
 
     @staticmethod
     def _from_instruction(inst, init_data, configs):
-        #aer_state = AerState(method='density_matrix')
-        aer_state = AerState()
+        aer_state = AerState(method='density_matrix')
 
         for config_key, config_value in configs.items():
             aer_state.configure(config_key, config_value)
 
         aer_state.allocate_qubits(inst.num_qubits)
-        #num_qubits = inst.num_qubits
+        num_qubits = inst.num_qubits
 
         if init_data is not None:
             aer_state.initialize(data=init_data, copy=True)
@@ -154,9 +153,51 @@ class AerDensityMatrix(DensityMatrix):
         if isinstance(inst, QuantumCircuit) and inst.global_phase != 0:
             aer_state.apply_global_phase(inst.global_phase)
 
-        #if isinstance(inst, QuantumCircuit):
-        #    AerDensityMatrix._aer_evolve_circuit(aer_state, inst, range(num_qubits))
-        #else:
-        #    AerDensityMatrix._aer_evolve_instruction(aer_state, inst, range(num_qubits))
+        if isinstance(inst, QuantumCircuit):
+            AerDensityMatrix._aer_evolve_circuit(aer_state, inst, range(num_qubits))
+        else:
+            AerDensityMatrix._aer_evolve_instruction(aer_state, inst, range(num_qubits))
 
         return aer_state.move_to_ndarray(), aer_state
+
+    @staticmethod
+    def _aer_evolve_circuit(aer_state, circuit, qubits):
+        """Apply circuit into aer_state"""
+        for instruction in circuit.data:
+            if instruction.clbits:
+                raise AerError(
+                    f'Cannot apply instruction with classical bits: {instruction.operation.name}'
+                )
+            inst = instruction.operation
+            qargs = instruction.qubits
+            dbg_print(inst)
+            AerDensityMatrix._aer_evolve_instruction(aer_state, inst,
+                                                     [qubits[circuit.find_bit(qarg).index]
+                                                      for qarg in qargs])
+
+    @staticmethod
+    def _aer_evolve_instruction(aer_state, inst, qubits):
+        """Apply instruction into aer_state"""
+        params = inst.params
+        if inst.name in ['u', 'u3']:
+            aer_state.apply_mcu(qubits[0:len(qubits) - 1], qubits[len(qubits) - 1],
+                                params[0], params[1], params[2])
+        elif inst.name in ['x', 'cx', 'ccx']:
+            aer_state.apply_mcx(qubits[0:len(qubits) - 1], qubits[len(qubits) - 1])
+        elif inst.name in ['y', 'cy']:
+            aer_state.apply_mcy(qubits[0:len(qubits) - 1], qubits[len(qubits) - 1])
+        elif inst.name in ['z', 'cz']:
+            aer_state.apply_mcz(qubits[0:len(qubits) - 1], qubits[len(qubits) - 1])
+        elif inst.name == 'unitary':
+            aer_state.apply_unitary(qubits, inst.params[0])
+        elif inst.name == 'diagonal':
+            aer_state.apply_diagonal(qubits, inst.params[0])
+        elif inst.name == 'reset':
+            aer_state.apply_reset(qubits)
+        else:
+            definition = inst.definition
+            if definition is inst:
+                raise AerError('cannot decompose ' + inst.name)
+            if not definition:
+                raise AerError('cannot decompose ' + inst.name)
+            AerDensityMatrix._aer_evolve_circuit(aer_state, definition, qubits)
