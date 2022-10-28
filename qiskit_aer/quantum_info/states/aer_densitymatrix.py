@@ -13,8 +13,6 @@
 """
 DensityMatrix quantum state class.
 """
-import os ###
-import inspect ###
 import copy
 import numpy as np
 
@@ -25,27 +23,7 @@ from qiskit_aer import AerSimulator
 from .aer_statevector import AerStatevector
 from .aer_state import AerState
 from ...backends.aerbackend import AerError
-
-def getframeinfo(stackIndex=2):
-    """
-    @see http://stackoverflow.com/questions/6810999/how-to-determine-file-function-and-line-number
-    @return frameInfo
-    """
-
-    stack = inspect.stack()
-    if stackIndex >= len(stack):
-        return None
-
-    callerframerecord = stack[stackIndex]
-    frame = callerframerecord[0]
-    info = inspect.getframeinfo(frame)
-
-    return info
-
-def dbg_print(*msg):
-    info = getframeinfo()
-    filename = info.filename.split(os.sep)[-1]
-    print(f'[{filename}:{info.lineno} ({info.function})]', *msg)
+from .aer_state import dbg_print
 
 class AerDensityMatrix(DensityMatrix):
     """AerDensityMatrix class
