@@ -84,7 +84,8 @@ PYBIND11_MODULE(controller_wrappers, m) {
                                                         int num_of_qubits,
                                                         py::array_t<std::complex<double>> &values,
                                                         bool copy) {
-      std::complex<double>* data_ptr = reinterpret_cast<std::complex<double>*>(values.mutable_data(0));
+      auto f_values = py::array_t<std::complex<double>, py::array::f_style>(values);
+      std::complex<double>* data_ptr = reinterpret_cast<std::complex<double>*>(f_values.mutable_data(0));
       state.configure("method", "density_matrix");
       state.initialize_densitymatrix(num_of_qubits, data_ptr, copy);
       return true;
@@ -102,7 +103,7 @@ PYBIND11_MODULE(controller_wrappers, m) {
 
     aer_state.def("move_to_matrix", [aer_state](AER::AerState &state) {
       auto mat = state.move_to_matrix();
-      auto ret = AerToPy::to_numpy_unspecified(std::move(mat));
+      auto ret = AerToPy::to_numpy(std::move(mat));
       return ret;
     });
 
