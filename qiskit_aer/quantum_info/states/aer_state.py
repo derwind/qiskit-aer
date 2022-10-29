@@ -216,7 +216,6 @@ class AerState:
                 self._moved_data = self._native_state.move_to_vector()
             ret = self._moved_data
             self._moved()
-        dbg_print(ret)
         return ret
 
     def allocate_qubits(self, num_of_qubits):
