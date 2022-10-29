@@ -17,7 +17,9 @@ import copy
 import numpy as np
 
 from qiskit.circuit import QuantumCircuit, Instruction
+from qiskit.exceptions import QiskitError
 from qiskit.quantum_info.states import DensityMatrix
+from qiskit.quantum_info.operators.predicates import is_hermitian_matrix
 
 from qiskit_aer import AerSimulator
 from .aer_statevector import AerStatevector
@@ -202,3 +204,33 @@ class AerDensityMatrix(DensityMatrix):
         state = np.zeros((size, size), dtype=complex)
         state[i, i] = 1.0
         return AerDensityMatrix(state, dims=dims)
+
+    def to_statevector(self, atol=None, rtol=None):
+        """Return a statevector from a pure density matrix.
+        Args:
+            atol (float): Absolute tolerance for checking operation validity.
+            rtol (float): Relative tolerance for checking operation validity.
+        Returns:
+            AerStatevector: The pure density matrix's corresponding statevector.
+                Corresponds to the eigenvector of the only non-zero eigenvalue.
+        Raises:
+            QiskitError: if the state is not pure.
+        """
+        if atol is None:
+            atol = self.atol
+        if rtol is None:
+            rtol = self.rtol
+
+        if not is_hermitian_matrix(self.data, atol=atol, rtol=rtol):
+            raise QiskitError('Not a valid density matrix (non-hermitian).')
+
+        evals, evecs = np.linalg.eig(self.data)
+
+        nonzero_evals = evals[abs(evals) > atol]
+        if len(nonzero_evals) != 1 or not np.isclose(nonzero_evals[0], 1, atol=atol, rtol=rtol):
+            raise QiskitError('Density matrix is not a pure state')
+
+        psi = evecs[:, np.argmax(evals)]  # eigenvectors returned in columns.
+        # XXX: The internal representation of psi affects statevector's representatio,
+        # so change the ordering of psi to C ordering.
+        return AerStatevector(np.ascontiguousarray(psi))
