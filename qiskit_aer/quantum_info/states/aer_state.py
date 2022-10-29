@@ -12,12 +12,13 @@
 """
 State class that handles internal C++ state safely
 """
-import os ###
-import inspect ###
+import os
+import inspect
 from enum import Enum
 import numpy as np
 from qiskit.providers.aer.backends.controller_wrappers import AerStateWrapper
 from ...backends.aerbackend import AerError
+
 
 def getframeinfo(stackIndex=2):
     """
@@ -35,10 +36,12 @@ def getframeinfo(stackIndex=2):
 
     return info
 
+
 def dbg_print(*msg):
     info = getframeinfo()
     filename = info.filename.split(os.sep)[-1]
     print(f'[{filename}:{info.lineno} ({info.function})]', *msg)
+
 
 class _STATE(Enum):
     INITIALIZING = 1
