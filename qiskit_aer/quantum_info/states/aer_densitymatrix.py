@@ -231,6 +231,6 @@ class AerDensityMatrix(DensityMatrix):
             raise QiskitError('Density matrix is not a pure state')
 
         psi = evecs[:, np.argmax(evals)]  # eigenvectors returned in columns.
-        # XXX: The internal representation of psi affects statevector's representatio,
+        # XXX: The internal representation of psi affects statevector's representation,
         # so change the ordering of psi to C ordering.
         return AerStatevector(np.ascontiguousarray(psi))
