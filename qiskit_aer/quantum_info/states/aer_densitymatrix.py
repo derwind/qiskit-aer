@@ -62,9 +62,10 @@ class AerDensityMatrix(DensityMatrix):
             if isinstance(data, (QuantumCircuit, Instruction)):
                 data, aer_state = AerDensityMatrix._from_instruction(data, None, configs)
             elif isinstance(data, list):
-                data, aer_state = AerDensityMatrix._from_ndarray(np.array(data, dtype=complex),
-                                                                 configs)
+                data = self._from_1d_array(np.array(data, dtype=complex))
+                data, aer_state = AerDensityMatrix._from_ndarray(data, configs)
             elif isinstance(data, np.ndarray):
+                data = self._from_1d_array(data)
                 data, aer_state = AerDensityMatrix._from_ndarray(data, configs)
             elif isinstance(data, AerDensityMatrix):
                 aer_state = data._aer_state
@@ -103,6 +104,21 @@ class AerDensityMatrix(DensityMatrix):
         ret._op_shape = copy.deepcopy(self._op_shape)
         ret._rng_generator = copy.deepcopy(self._rng_generator)
         return ret
+
+    @staticmethod
+    def _from_1d_array(data):
+        # Convert statevector into a density matrix
+        ndim = data.ndim
+        shape = data.shape
+        if ndim == 2 and shape[0] == shape[1]:
+            pass  # We good
+        elif ndim == 1:
+            data = np.outer(data, np.conj(data))
+        elif ndim == 2 and shape[1] == 1:
+            data = np.reshape(data, shape[0])
+        else:
+            raise QiskitError("Invalid AerDensityMatrix input: not a square matrix.")
+        return data
 
     @staticmethod
     def _from_ndarray(init_data, configs):
