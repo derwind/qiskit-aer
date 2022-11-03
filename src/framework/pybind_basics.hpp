@@ -72,6 +72,12 @@ template <> py::object to_python(json_t &&obj);
 template <typename T>
 py::array_t<T, py::array::f_style> to_numpy(matrix<T> &&obj);
 
+template <typename T>
+py::array_t<T, py::array::c_style> to_numpy_c(matrix<T> &&obj);
+
+template <typename T>
+py::array_t<T> to_numpy_unspecified(matrix<T> &&obj);
+
 // Convert a Vector to a 1D Numpy array
 template <typename T>
 py::array_t<T> to_numpy(AER::Vector<T> &&obj);
@@ -174,6 +180,24 @@ py::array_t<T, py::array::f_style> to_numpy(matrix<T> &&src) {
   matrix<T>* src_ptr = new matrix<T>(std::move(src));
   auto capsule = py::capsule(src_ptr, [](void* p) { delete reinterpret_cast<matrix<T>*>(p); });
   return py::array_t<T, py::array::f_style>(shape, src_ptr->data(), capsule);
+}
+
+template <typename T>
+py::array_t<T, py::array::c_style> to_numpy_c(matrix<T> &&src) {
+  std::array<py::ssize_t, 2> shape {static_cast<py::ssize_t>(src.GetRows()),
+                                    static_cast<py::ssize_t>(src.GetColumns())};
+  matrix<T>* src_ptr = new matrix<T>(std::move(src));
+  auto capsule = py::capsule(src_ptr, [](void* p) { delete reinterpret_cast<matrix<T>*>(p); });
+  return py::array_t<T, py::array::c_style>(shape, src_ptr->data(), capsule);
+}
+
+template <typename T>
+py::array_t<T> to_numpy_unspecified(matrix<T> &&src) {
+  std::array<py::ssize_t, 2> shape {static_cast<py::ssize_t>(src.GetRows()),
+                                    static_cast<py::ssize_t>(src.GetColumns())};
+  matrix<T>* src_ptr = new matrix<T>(std::move(src));
+  auto capsule = py::capsule(src_ptr, [](void* p) { delete reinterpret_cast<matrix<T>*>(p); });
+  return py::array_t<T>(shape, src_ptr->data(), capsule);
 }
 
 template <typename T>
