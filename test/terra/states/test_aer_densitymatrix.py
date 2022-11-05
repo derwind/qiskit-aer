@@ -16,29 +16,21 @@ Integration Tests for AerDensityMatrix
 import os
 import sys
 import unittest
-from math import pi
 import numpy as np
 import logging
-from itertools import permutations
 from ddt import ddt, data
 from numpy.testing import assert_allclose
 
-from qiskit import transpile
 from qiskit.exceptions import QiskitError
 from qiskit.circuit import QuantumCircuit, QuantumRegister
-from qiskit.providers.basicaer import QasmSimulatorPy
 from qiskit.quantum_info.random import random_unitary, random_density_matrix, random_pauli
-from qiskit.quantum_info.states import Statevector
+from qiskit.quantum_info.states import DensityMatrix, Statevector
 from qiskit.circuit.library import QuantumVolume
-from qiskit.providers.aer import AerSimulator
 from qiskit.quantum_info.operators.operator import Operator
 from qiskit.quantum_info.operators.symplectic import Pauli, SparsePauliOp
-from qiskit.quantum_info.operators.predicates import matrix_equal
-from qiskit.visualization.state_visualization import numbers_to_latex_terms, state_to_latex
 from qiskit.circuit.library import QFT, HGate
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from test.terra import common
-from qiskit_aer.aererror import AerError
 from qiskit_aer.quantum_info.states import AerDensityMatrix, AerStatevector
 
 
@@ -49,9 +41,155 @@ logger = logging.getLogger(__name__)
 class TestAerDensityMatrix(common.QiskitAerTestCase):
     """Tests for AerDensityMatrix class."""
 
-    ####                                          ####
+    def test_qv(self):
+        """Test generation of Aer's DensityMatrix with QV """
+        circ = QuantumVolume(5, seed=1111)
+        state = AerDensityMatrix(circ)
+        expected = DensityMatrix(circ)
+
+        for e, s in zip(expected.data, state.data):
+            self.assertAlmostEqual(e, s)
+
+    def test_method_and_device_properties(self):
+        """Test method and device properties"""
+        circ = QuantumVolume(5, seed=1111)
+
+        state1 = AerDensityMatrix(circ)
+        self.assertEqual('density_matrix', state1.metadata()['method'])
+        self.assertEqual('CPU', state1.metadata()['device'])
+
+        state2 = AerDensityMatrix(circ, method='density_matrix')
+        self.assertEqual('density_matrix', state2.metadata()['method'])
+        self.assertEqual('CPU', state2.metadata()['device'])
+
+        self.assertEqual(state1, state2)
+
+    def test_GHZ(self):
+        """Test each method can process ghz"""
+        ghz = QuantumCircuit(4)
+        ghz.h(0)
+        ghz.cx(0, 1)
+        ghz.cx(1, 2)
+        ghz.cx(2, 3)
+
+        dm = AerDensityMatrix(ghz)
+        counts = dm.sample_counts(shots=1024)
+        self.assertEqual(2, len(counts))
+        self.assertTrue('0000' in counts)
+        self.assertTrue('1111' in counts)
+
+    def test_QFT(self):
+        """Test each method can process qft"""
+        qft = QuantumCircuit(4)
+        qft.h(range(4))
+        qft.compose(QFT(4), inplace=True)
+
+        dm = AerDensityMatrix(qft)
+        counts = dm.sample_counts(shots=1024)
+        self.assertEqual(1, len(counts))
+        self.assertTrue('0000' in counts)
+
+    def test_single_qubit_QV(self):
+        """Test single qubit QuantumVolume"""
+        state = AerDensityMatrix(QuantumVolume(1))
+        counts = state.sample_counts(shots=1024)
+        self.assertEqual(1, len(counts))
+        self.assertTrue('0' in counts)
+
+    def test_evolve(self):
+        """Test evolve method for circuits"""
+        circ1 = QuantumVolume(5, seed=1111)
+        circ2 = circ1.compose(circ1)
+        circ3 = circ2.compose(circ1)
+
+        state1 = AerDensityMatrix(circ1)
+        state2 = AerDensityMatrix(circ2)
+        state3 = AerDensityMatrix(circ3)
+
+        self.assertEqual(state1.evolve(circ1), state2)
+        self.assertEqual(state1.evolve(circ1).evolve(circ1), state3)
+
+    def test_decompose(self):
+        """Test basic gates can be decomposed correctly"""
+        circ = QuantumCircuit(3)
+        circ.h(0)
+        circ.x(1)
+        circ.ry(np.pi / 2, 2)
+        state1 = AerDensityMatrix(circ)
+
+    def test_ry(self):
+        # Test tensor product of 1-qubit gates
+        circuit = QuantumCircuit(3)
+        circuit.h(0)
+        circuit.x(1)
+        circuit.ry(np.pi / 2, 2)
+        psi = AerDensityMatrix.from_instruction(circuit)
+        target = AerDensityMatrix.from_label("000").evolve(Operator(circuit))
+        self.assertEqual(target, psi)
+
+    def test_h(self):
+        # Test tensor product of 1-qubit gates
+        circuit = QuantumCircuit(3)
+        circuit.h(0)
+        circuit.h(1)
+        target = AerDensityMatrix.from_label("000").evolve(Operator(circuit))
+        psi = AerDensityMatrix.from_instruction(circuit)
+        self.assertEqual(psi, target)
+
+    def test_deepcopy(self):
+        """Test deep copy"""
+        import copy
+        circ1 = QuantumVolume(5, seed=1111)
+
+        state1 = AerDensityMatrix(circ1)
+        state2 = copy.deepcopy(state1)
+
+        for pa1, pa2 in zip(state1.data, state2.data):
+            self.assertAlmostEqual(pa1, pa2)
+
+        self.assertNotEqual(id(state1._data), id(state2._data))
+
+    def test_initialize_with_ndarray(self):
+        """Test ndarray initialization """
+        circ = QuantumVolume(5, seed=1111)
+        expected = DensityMatrix(circ)
+        state = AerDensityMatrix(expected.data)
+
+        for e, s in zip(expected.data, state.data):
+            self.assertAlmostEqual(e, s)
+
+    def test_initialize_with_terra_statevector(self):
+        """Test Statevector initialization """
+        circ = QuantumVolume(5, seed=1111)
+        sv = Statevector(circ)
+        expected = np.outer(sv, np.conjugate(sv))
+        state = AerDensityMatrix(sv)
+
+        for e, s in zip(expected, state.data):
+            self.assertAlmostEqual(e, s)
+
+    def test_initialize_with_statevector(self):
+        """Test AerStatevector initialization """
+        circ = QuantumVolume(5, seed=1111)
+        sv = AerStatevector(circ)
+        expected = np.outer(sv, np.conjugate(sv))
+        state = AerDensityMatrix(sv)
+
+        for e, s in zip(expected, state.data):
+            self.assertAlmostEqual(e, s)
+
+    def test_initialize_with_densitymatrix(self):
+        """Test DensityMatrix initialization """
+        circ = QuantumVolume(5, seed=1111)
+        expected = DensityMatrix(circ)
+        state = AerDensityMatrix(expected)
+
+        for e, s in zip(expected.data, state.data):
+            self.assertAlmostEqual(e, s)
+
+    ####                                            ####
     ###   Copy from test_densitymatrix.py in terra   ###
-    ####                                          ####
+    ####                                            ####
     @classmethod
     def rand_vec(cls, n, normalize=False):
         """Return complex vector or statevector"""
