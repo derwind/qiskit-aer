@@ -469,13 +469,13 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
     def test_tensor(self):
         """Test tensor method."""
         for _ in range(10):
-            rho0 = self.rand_rho(2)
-            rho1 = self.rand_rho(3)
+            rho0 = rand_rho(2)
+            rho1 = rand_rho(4)
             target = np.kron(rho0, rho1)
             state = AerDensityMatrix(rho0).tensor(AerDensityMatrix(rho1))
-            self.assertEqual(state.dim, 6)
-            self.assertEqual(state.dims(), (3, 2))
-            assert_allclose(state.data, target)
+            self.assertEqual(state.dim, 8)
+            self.assertEqual(state.dims(), (2, 2, 2))
+            self.assert_allclose(state.data, target)
 
     def test_add(self):
         """Test add method."""
