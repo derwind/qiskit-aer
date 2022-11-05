@@ -67,6 +67,9 @@ class AerDensityMatrix(DensityMatrix):
             elif isinstance(data, np.ndarray):
                 data = self._from_1d_array(data)
                 data, aer_state = AerDensityMatrix._from_ndarray(data, configs)
+            elif isinstance(data, DensityMatrix):
+                data, aer_state = AerDensityMatrix._from_ndarray(np.array(data.data, dtype=complex),
+                                                                 configs)
             elif isinstance(data, AerDensityMatrix):
                 aer_state = data._aer_state
                 if dims is None:
@@ -118,6 +121,55 @@ class AerDensityMatrix(DensityMatrix):
 
     def conjugate(self):
         return AerDensityMatrix(np.conj(self._data), dims=self.dims())
+
+    def tensor(self, other):
+        """Return the tensor product state self ⊗ other.
+        Args:
+            other (AerDensityMatrix): a quantum state object.
+        Returns:
+            AerDensityMatrix: the tensor product operator self ⊗ other.
+        Raises:
+            QiskitError: if other is not a quantum state.
+        """
+        if not isinstance(other, AerDensityMatrix):
+            other = AerDensityMatrix(other)
+        ret = copy.copy(self)
+        ret._data = np.kron(self._data, other._data)
+        ret._op_shape = self._op_shape.tensor(other._op_shape)
+        return ret
+
+    def expand(self, other):
+        """Return the tensor product state other ⊗ self.
+        Args:
+            other (AerDensityMatrix): a quantum state object.
+        Returns:
+            AerDensityMatrix: the tensor product state other ⊗ self.
+        Raises:
+            QiskitError: if other is not a quantum state.
+        """
+        if not isinstance(other, AerDensityMatrix):
+            other = AerDensityMatrix(other)
+        ret = copy.copy(self)
+        ret._data = np.kron(other._data, self._data)
+        ret._op_shape = self._op_shape.expand(other._op_shape)
+        return ret
+
+    def _add(self, other):
+        """Return the linear combination self + other.
+        Args:
+            other (AerDensityMatrix): a quantum state object.
+        Returns:
+            AerDensityMatrix: the linear combination self + other.
+        Raises:
+            QiskitError: if other is not a quantum state, or has
+                         incompatible dimensions.
+        """
+        if not isinstance(other, AerDensityMatrix):
+            other = AerDensityMatrix(other)
+        self._op_shape._validate_add(other._op_shape)
+        ret = copy.copy(self)
+        ret._data = self.data + other.data
+        return ret
 
     def sample_memory(self, shots, qargs=None):
         if qargs is None:
