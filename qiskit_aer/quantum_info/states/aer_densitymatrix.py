@@ -96,6 +96,17 @@ class AerDensityMatrix(DensityMatrix):
         self._result = None
         self._configs = configs
 
+    def _last_result(self):
+        if self._result is None:
+            self._result = self._aer_state.last_result()
+        return self._result
+
+    def metadata(self):
+        """Return result metadata of an operation that executed lastly."""
+        if self._last_result() is None:
+            raise AerError('AerState was not used and metdata does not exist.')
+        return self._last_result()['metadata']
+
     def __copy__(self):
         return copy.deepcopy(self)
 
