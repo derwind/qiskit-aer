@@ -68,8 +68,8 @@ class AerDensityMatrix(DensityMatrix):
                 data = self._from_1d_array(data)
                 data, aer_state = AerDensityMatrix._from_ndarray(data, configs)
             elif isinstance(data, DensityMatrix):
-                data, aer_state = AerDensityMatrix._from_ndarray(np.array(data.data, dtype=complex),
-                                                                 configs)
+                data, aer_state = AerDensityMatrix._from_ndarray(np.array(data.data,
+                                                                          dtype=complex), configs)
             elif isinstance(data, AerDensityMatrix):
                 aer_state = data._aer_state
                 if dims is None:
