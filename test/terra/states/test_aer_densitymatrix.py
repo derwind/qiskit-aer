@@ -47,7 +47,8 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         state = AerDensityMatrix(circ)
         expected = DensityMatrix(circ)
 
-        for e, s in zip(expected.data, state.data):
+        self.assertEqual(expected.data.shape, state.data.shape)
+        for e, s in zip(expected.data.ravel(), state.data.ravel()):
             self.assertAlmostEqual(e, s)
 
     def test_method_and_device_properties(self):
@@ -156,7 +157,8 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         expected = DensityMatrix(circ)
         state = AerDensityMatrix(expected.data)
 
-        for e, s in zip(expected.data, state.data):
+        self.assertEqual(expected.data.shape, state.data.shape)
+        for e, s in zip(expected.data.ravel(), state.data.ravel()):
             self.assertAlmostEqual(e, s)
 
     def test_initialize_with_terra_statevector(self):
@@ -166,7 +168,8 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         expected = np.outer(sv, np.conjugate(sv))
         state = AerDensityMatrix(sv)
 
-        for e, s in zip(expected, state.data):
+        self.assertEqual(expected.shape, state.data.shape)
+        for e, s in zip(expected.ravel(), state.data.ravel()):
             self.assertAlmostEqual(e, s)
 
     def test_initialize_with_statevector(self):
@@ -176,7 +179,8 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         expected = np.outer(sv, np.conjugate(sv))
         state = AerDensityMatrix(sv)
 
-        for e, s in zip(expected, state.data):
+        self.assertEqual(expected.shape, state.data.shape)
+        for e, s in zip(expected.ravel(), state.data.ravel()):
             self.assertAlmostEqual(e, s)
 
     def test_initialize_with_densitymatrix(self):
@@ -185,7 +189,8 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         expected = DensityMatrix(circ)
         state = AerDensityMatrix(expected)
 
-        for e, s in zip(expected.data, state.data):
+        self.assertAlmostEqual(expected.data.shape, state.data.shape)
+        for e, s in zip(expected.data.ravel(), state.data.ravel()):
             self.assertAlmostEqual(e, s)
 
     ####                                            ####
