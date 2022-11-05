@@ -27,7 +27,7 @@ from qiskit import transpile
 from qiskit.exceptions import QiskitError
 from qiskit.circuit import QuantumCircuit, QuantumRegister
 from qiskit.providers.basicaer import QasmSimulatorPy
-from qiskit.quantum_info.random import random_unitary, random_statevector, random_pauli
+from qiskit.quantum_info.random import random_unitary, random_density_matrix, random_pauli
 from qiskit.quantum_info.states import Statevector
 from qiskit.circuit.library import QuantumVolume
 from qiskit.providers.aer import AerSimulator
@@ -39,7 +39,7 @@ from qiskit.circuit.library import QFT, HGate
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from test.terra import common
 from qiskit_aer.aererror import AerError
-from qiskit_aer.quantum_info.states import AerStatevector, AerDensityMatrix
+from qiskit_aer.quantum_info.states import AerDensityMatrix, AerStatevector
 
 
 logger = logging.getLogger(__name__)
@@ -113,7 +113,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         """Test initialization from AerDensityMatrix."""
         vec = self.rand_vec(4)
         target = AerDensityMatrix(np.outer(vec, np.conjugate(vec)))
-        rho = AerDensityMatrix(Statevector(vec))
+        rho = AerDensityMatrix(AerStatevector(vec))
         self.assertEqual(rho, target)
 
     def test_init_circuit(self):
@@ -126,7 +126,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         circ = QuantumCircuit(qr)
         circ.unitary(u0, [qr[0]])
         circ.unitary(u1, [qr[1]])
-        target_vec = Statevector(np.kron(u1, u0).dot([1, 0, 0, 0]))
+        target_vec = AerStatevector(np.kron(u1, u0).dot([1, 0, 0, 0]))
         target = AerDensityMatrix(target_vec)
         rho = AerDensityMatrix(circ)
         self.assertEqual(rho, target)
@@ -170,7 +170,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         self.assertEqual(rho, target)
 
         # Test initialize instruction
-        init = Statevector([1, 0, 0, 1j]) / np.sqrt(2)
+        init = AerStatevector([1, 0, 0, 1j]) / np.sqrt(2)
         target = AerDensityMatrix(init)
         circuit = QuantumCircuit(2)
         circuit.initialize(init.data, [0, 1])
@@ -187,7 +187,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
 
     def test_from_instruction(self):
         """Test initialization from an instruction."""
-        target_vec = Statevector(np.dot(HGate().to_matrix(), [1, 0]))
+        target_vec = AerStatevector(np.dot(HGate().to_matrix(), [1, 0]))
         target = AerDensityMatrix(target_vec)
         rho = AerDensityMatrix.from_instruction(HGate())
         self.assertEqual(rho, target)
@@ -430,7 +430,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
     def test_densitymatrix_to_statevector_pure(self):
         """Test converting a pure density matrix to statevector."""
         state = 1 / np.sqrt(2) * (np.array([1, 0, 0, 0, 0, 0, 0, 1]))
-        psi = Statevector(state)
+        psi = AerStatevector(state)
         rho = AerDensityMatrix(psi)
         phi = rho.to_statevector()
         self.assertTrue(psi.equiv(phi))
@@ -439,7 +439,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         """Test converting a pure density matrix to statevector."""
         state_1 = 1 / np.sqrt(2) * (np.array([1, 0, 0, 0, 0, 0, 0, 1]))
         state_2 = 1 / np.sqrt(2) * (np.array([0, 0, 0, 0, 0, 0, 1, 1]))
-        psi = 0.5 * (Statevector(state_1) + Statevector(state_2))
+        psi = 0.5 * (AerStatevector(state_1) + AerStatevector(state_2))
         rho = AerDensityMatrix(psi)
         self.assertRaises(QiskitError, rho.to_statevector)
 
@@ -478,7 +478,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
     def test_probabilities_ghz(self):
         """Test probabilities method for GHZ state"""
 
-        psi = (Statevector.from_label("000") + Statevector.from_label("111")) / np.sqrt(2)
+        psi = (AerStatevector.from_label("000") + AerStatevector.from_label("111")) / np.sqrt(2)
         state = AerDensityMatrix(psi)
 
         # 3-qubit qargs
@@ -506,9 +506,9 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         """Test probabilities method with W state"""
 
         psi = (
-            Statevector.from_label("001")
-            + Statevector.from_label("010")
-            + Statevector.from_label("100")
+            AerStatevector.from_label("001")
+            + AerStatevector.from_label("010")
+            + AerStatevector.from_label("100")
         ) / np.sqrt(3)
         state = AerDensityMatrix(psi)
 
@@ -568,7 +568,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
     def test_probabilities_dict_ghz(self):
         """Test probabilities_dict method for GHZ state"""
 
-        psi = (Statevector.from_label("000") + Statevector.from_label("111")) / np.sqrt(2)
+        psi = (AerStatevector.from_label("000") + AerStatevector.from_label("111")) / np.sqrt(2)
         state = AerDensityMatrix(psi)
 
         # 3-qubit qargs
@@ -596,9 +596,9 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         """Test probabilities_dict method with W state"""
 
         psi = (
-            Statevector.from_label("001")
-            + Statevector.from_label("010")
-            + Statevector.from_label("100")
+            AerStatevector.from_label("001")
+            + AerStatevector.from_label("010")
+            + AerStatevector.from_label("100")
         ) / np.sqrt(3)
         state = AerDensityMatrix(psi)
 
@@ -630,7 +630,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         shots = 2000
         threshold = 0.02 * shots
         state = AerDensityMatrix(
-            (Statevector.from_label("000") + Statevector.from_label("111")) / np.sqrt(2)
+            (AerStatevector.from_label("000") + AerStatevector.from_label("111")) / np.sqrt(2)
         )
         state.seed(100)
 
@@ -664,9 +664,9 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         threshold = 0.02 * shots
         state = AerDensityMatrix(
             (
-                Statevector.from_label("001")
-                + Statevector.from_label("010")
-                + Statevector.from_label("100")
+                AerStatevector.from_label("001")
+                + AerStatevector.from_label("010")
+                + AerStatevector.from_label("100")
             )
             / np.sqrt(3)
         )
@@ -713,7 +713,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
 
         shots = 2000
         state = AerDensityMatrix(
-            (Statevector.from_label("000") + Statevector.from_label("111")) / np.sqrt(2)
+            (AerStatevector.from_label("000") + AerStatevector.from_label("111")) / np.sqrt(2)
         )
         state.seed(100)
 
@@ -749,9 +749,9 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         shots = 3000
         state = AerDensityMatrix(
             (
-                Statevector.from_label("001")
-                + Statevector.from_label("010")
-                + Statevector.from_label("100")
+                AerStatevector.from_label("001")
+                + AerStatevector.from_label("010")
+                + AerStatevector.from_label("100")
             )
             / np.sqrt(3)
         )
@@ -939,7 +939,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
     def test_expval(self):
         """Test expectation_value method"""
 
-        psi = Statevector([1, 0, 0, 1]) / np.sqrt(2)
+        psi = AerStatevector([1, 0, 0, 1]) / np.sqrt(2)
         rho = AerDensityMatrix(psi)
         for label, target in [
             ("II", 1),
@@ -956,7 +956,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
                 expval = rho.expectation_value(op)
                 self.assertAlmostEqual(expval, target)
 
-        psi = Statevector([np.sqrt(2), 0, 0, 0, 0, 0, 0, 1 + 1j]) / 2
+        psi = AerStatevector([np.sqrt(2), 0, 0, 0, 0, 0, 0, 1 + 1j]) / 2
         rho = AerDensityMatrix(psi)
         for label, target in [
             ("XXX", np.sqrt(2) / 2),
