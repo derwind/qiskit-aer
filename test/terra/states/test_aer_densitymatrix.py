@@ -144,7 +144,8 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         state1 = AerDensityMatrix(circ1)
         state2 = copy.deepcopy(state1)
 
-        for pa1, pa2 in zip(state1.data, state2.data):
+        self.assertEqual(state1.data.shape, state2.data.shape)
+        for pa1, pa2 in zip(state1.data.ravel(), state2.data.ravel()):
             self.assertAlmostEqual(pa1, pa2)
 
         self.assertNotEqual(id(state1._data), id(state2._data))
