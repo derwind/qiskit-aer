@@ -695,18 +695,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
                 counts = state.sample_counts(shots, qargs=qargs)
                 self.assertDictAlmostEqual(counts, target, threshold)
 
-    def test_sample_counts_qutrit(self):
-        """Test sample_counts method for qutrit state"""
-        p = 0.3
-        shots = 1000
-        threshold = 0.03 * shots
-        state = AerDensityMatrix(np.diag([p, 0, 1 - p]))
-        state.seed(100)
-
-        with self.subTest(msg="counts"):
-            target = {"0": shots * p, "2": shots * (1 - p)}
-            counts = state.sample_counts(shots=shots)
-            self.assertDictAlmostEqual(counts, target, threshold)
+    # omit test_sample_counts_qutrit since qutrit is currently not supported
 
     def test_sample_memory_ghz(self):
         """Test sample_memory method for GHZ state"""
@@ -783,17 +772,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
                 self.assertEqual(len(memory), shots)
                 self.assertEqual(set(memory), set(target))
 
-    def test_sample_memory_qutrit(self):
-        """Test sample_memory method for qutrit state"""
-        p = 0.3
-        shots = 1000
-        state = AerDensityMatrix(np.diag([p, 0, 1 - p]))
-        state.seed(100)
-
-        with self.subTest(msg="memory"):
-            memory = state.sample_memory(shots)
-            self.assertEqual(len(memory), shots)
-            self.assertEqual(set(memory), {"0", "2"})
+    # omit test_sample_memory_qutrit since qutrit is currently not supported
 
     def test_reset_2qubit(self):
         """Test reset method for 2-qubit state"""
@@ -824,14 +803,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
             target = AerDensityMatrix(np.diag([0.5, 0.5, 0, 0]))
             self.assertEqual(value, target)
 
-    def test_reset_qutrit(self):
-        """Test reset method for qutrit"""
-
-        state = AerDensityMatrix(np.diag([1, 1, 1]) / 3)
-        state.seed(200)
-        value = state.reset()
-        target = AerDensityMatrix(np.diag([1, 0, 0]))
-        self.assertEqual(value, target)
+    # omit test_reset_qutrit since qutrit is currently not supported
 
     def test_measure_2qubit(self):
         """Test measure method for 2-qubit state"""
@@ -896,27 +868,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
                     target = AerDensityMatrix.from_label("10")
                     self.assertEqual(value, target)
 
-    def test_measure_qutrit(self):
-        """Test measure method for qutrit"""
-
-        state = AerDensityMatrix(np.diag([1, 1, 1]) / 3)
-        seed = 200
-        shots = 100
-
-        for i in range(shots):
-            rho = state.copy()
-            rho.seed(seed + i)
-            outcome, value = rho.measure()
-            self.assertIn(outcome, ["0", "1", "2"])
-            if outcome == "0":
-                target = AerDensityMatrix(np.diag([1, 0, 0]))
-                self.assertEqual(value, target)
-            elif outcome == "1":
-                target = AerDensityMatrix(np.diag([0, 1, 0]))
-                self.assertEqual(value, target)
-            else:
-                target = AerDensityMatrix(np.diag([0, 0, 1]))
-                self.assertEqual(value, target)
+    # omit test_measure_qutrit since qutrit is currently not supported
 
     def test_from_int(self):
         """Test from_int method"""
