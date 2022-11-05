@@ -116,6 +116,22 @@ class AerDensityMatrix(DensityMatrix):
         ret._rng_generator = copy.deepcopy(self._rng_generator)
         return ret
 
+    def conjugate(self):
+        return AerDensityMatrix(np.conj(self._data), dims=self.dims())
+
+    def sample_memory(self, shots, qargs=None):
+        if qargs is None:
+            qubits = np.arange(self._aer_state.num_qubits)
+        else:
+            qubits = np.array(qargs)
+
+        aer_state = AerState(**self._aer_state.configuration())
+        aer_state.initialize(self._data, copy=False)
+        samples = aer_state.sample_memory(qubits, shots)
+        aer_state.close()
+
+        return samples
+
     @staticmethod
     def _from_1d_array(data):
         # Convert statevector into a density matrix
