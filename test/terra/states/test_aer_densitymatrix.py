@@ -221,18 +221,18 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
 
     def test_init_array(self):
         """Test initialization from array."""
-        rho = self.rand_rho(3)
+        rho = self.rand_rho(4)
         state = AerDensityMatrix(rho)
         assert_allclose(state.data, rho)
-        self.assertEqual(state.dim, 3)
-        self.assertEqual(state.dims(), (3,))
-        self.assertIsNone(state.num_qubits)
+        self.assertEqual(state.dim, 4)
+        self.assertEqual(state.dims(), (2, 2))
+        self.assertEqual(state.num_qubits, 2)
 
-        rho = self.rand_rho(2 * 3 * 4)
-        state = AerDensityMatrix(rho, dims=[2, 3, 4])
+        rho = self.rand_rho(2 * 4 * 8)
+        state = AerDensityMatrix(rho, dims=[2, 4, 8])
         assert_allclose(state.data, rho)
-        self.assertEqual(state.dim, 2 * 3 * 4)
-        self.assertEqual(state.dims(), (2, 3, 4))
+        self.assertEqual(state.dim, 2 * 4 * 8)
+        self.assertEqual(state.dims(), (2, 4, 8))
         self.assertIsNone(state.num_qubits)
 
     def test_init_array_except(self):
@@ -454,7 +454,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         """Test expand method."""
         for _ in range(10):
             rho0 = self.rand_rho(2)
-            rho1 = self.rand_rho(3)
+            rho1 = self.rand_rho(4)
             target = np.kron(rho1, rho0)
             state = AerDensityMatrix(rho0).expand(AerDensityMatrix(rho1))
             self.assertEqual(state.dim, 6)
@@ -1010,9 +1010,10 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
             value = AerDensityMatrix.from_int(3, 4)
             self.assertEqual(target, value)
 
-        with self.subTest(msg="from_int(8, (3, 3))"):
-            target = AerDensityMatrix([0, 0, 0, 0, 0, 0, 0, 0, 1], dims=(3, 3))
-            value = AerDensityMatrix.from_int(8, (3, 3))
+        with self.subTest(msg="from_int(15, (4, 4))"):
+            target = AerDensityMatrix([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 1],
+                                      dims=(4, 4))
+            value = AerDensityMatrix.from_int(15, (4, 4))
             self.assertEqual(target, value)
 
     def test_expval(self):
