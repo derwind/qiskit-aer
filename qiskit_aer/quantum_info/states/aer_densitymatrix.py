@@ -247,6 +247,28 @@ class AerDensityMatrix(DensityMatrix):
 
         return aer_state.move_to_ndarray(), aer_state
 
+    def reset(self, qargs=None):
+        """Reset state or subsystems to the 0-state.
+        Args:
+            qargs (list or None): subsystems to reset, if None all
+                                  subsystems will be reset to their 0-state
+                                  (Default: None).
+        Returns:
+            AerDensityMatrix: the reset state.
+        Additional Information:
+            If all subsystems are reset this will return the ground state
+            on all subsystems. If only a some subsystems are reset this
+            function will perform evolution by the reset
+            :class:`~qiskit.quantum_info.SuperOp` of the reset subsystems.
+        """
+
+        # Normally, DensityMatrix.reset returns DensityMatrix, which should
+        # be converted to AerDensityMatrix if necessary.
+        dm = super().reset(qargs=qargs)
+        if isinstance(dm, DensityMatrix):
+            dm = AerDensityMatrix(dm)
+        return dm
+
     @classmethod
     def from_label(cls, label):
         r"""Return a tensor product of Pauli X,Y,Z eigenstates.
