@@ -31,6 +31,7 @@ from qiskit.quantum_info.operators.symplectic import Pauli, SparsePauliOp
 from qiskit.circuit.library import QFT, HGate
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from test.terra import common
+from qiskit_aer.aererror import AerError
 from qiskit_aer.quantum_info.states import AerDensityMatrix, AerStatevector
 
 
@@ -212,6 +213,16 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         """Return random pure state density matrix"""
         rho = cls.rand_vec(n, normalize=True)
         return np.outer(rho, np.conjugate(rho))
+
+    def test_init_array_qudit(self):
+        """Test initialization from array."""
+        rho = self.rand_rho(3)
+        # qudit is not currently supported
+        self.assertRaises(AerError, AerDensityMatrix, rho)
+
+        rho = self.rand_rho(2 * 3 * 4)
+        # qudit is not currently supported
+        self.assertRaises(AerError, AerDensityMatrix, rho, dims=[2, 3, 4])
 
     def test_init_array_qubit(self):
         """Test subsystem initialization from N-qubit array."""
