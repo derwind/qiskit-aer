@@ -194,6 +194,16 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         for e, s in zip(expected.data.ravel(), state.data.ravel()):
             self.assertAlmostEqual(e, s)
 
+    def test_init_array_qudit(self):
+        """Test initialization from array."""
+        rho = self.rand_rho(3)
+        # qudit is not currently supported
+        self.assertRaises(AerError, AerDensityMatrix, rho)
+
+        rho = self.rand_rho(2 * 3 * 4)
+        # qudit is not currently supported
+        self.assertRaises(AerError, AerDensityMatrix, rho, dims=[2, 3, 4])
+
     ####                                            ####
     ###   Copy from test_densitymatrix.py in terra   ###
     ####                                            ####
@@ -213,16 +223,6 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         """Return random pure state density matrix"""
         rho = cls.rand_vec(n, normalize=True)
         return np.outer(rho, np.conjugate(rho))
-
-    def test_init_array_qudit(self):
-        """Test initialization from array."""
-        rho = self.rand_rho(3)
-        # qudit is not currently supported
-        self.assertRaises(AerError, AerDensityMatrix, rho)
-
-        rho = self.rand_rho(2 * 3 * 4)
-        # qudit is not currently supported
-        self.assertRaises(AerError, AerDensityMatrix, rho, dims=[2, 3, 4])
 
     def test_init_array_qubit(self):
         """Test subsystem initialization from N-qubit array."""
@@ -473,8 +473,8 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
             rho1 = self.rand_rho(4)
             target = np.kron(rho1, rho0)
             state = AerDensityMatrix(rho0).expand(AerDensityMatrix(rho1))
-            self.assertEqual(state.dim, 6)
-            self.assertEqual(state.dims(), (2, 3))
+            self.assertEqual(state.dim, 8)
+            self.assertEqual(state.dims(), (2, 2, 2))
             assert_allclose(state.data, target)
 
     def test_tensor(self):
@@ -552,20 +552,20 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
             }
             self.assertDictAlmostEqual(target, rho.to_dict())
 
-        with self.subTest(msg="dims = (2, 3)"):
-            rho = AerDensityMatrix(np.diag(np.arange(1, 7)), dims=(2, 3))
+        with self.subTest(msg="dims = (2, 4)"):
+            rho = AerDensityMatrix(np.diag(np.arange(1, 9)), dims=(2, 4))
             target = {}
             for i in range(2):
-                for j in range(3):
+                for j in range(4):
                     key = "{1}{0}|{1}{0}".format(i, j)
                     target[key] = 2 * j + i + 1
             self.assertDictAlmostEqual(target, rho.to_dict())
 
-        with self.subTest(msg="dims = (2, 11)"):
-            vec = AerDensityMatrix(np.diag(np.arange(1, 23)), dims=(2, 11))
+        with self.subTest(msg="dims = (2, 16)"):
+            vec = AerDensityMatrix(np.diag(np.arange(1, 33)), dims=(2, 16))
             target = {}
             for i in range(2):
-                for j in range(11):
+                for j in range(16):
                     key = "{1},{0}|{1},{0}".format(i, j)
                     target[key] = 2 * j + i + 1
             self.assertDictAlmostEqual(target, vec.to_dict())
@@ -1253,6 +1253,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         for drawtype in ["repr", "text", "latex", "latex_source", "qsphere", "hinton", "bloch"]:
             with self.subTest(msg=f"draw('{drawtype}')"):
                 dm.draw(drawtype)
+
 
 if __name__ == "__main__":
     unittest.main()
