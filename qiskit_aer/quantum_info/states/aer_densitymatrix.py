@@ -67,14 +67,14 @@ class AerDensityMatrix(DensityMatrix):
             elif isinstance(data, np.ndarray):
                 data = self._from_1d_array(data)
                 data, aer_state = AerDensityMatrix._from_ndarray(data, configs)
-            elif isinstance(data, DensityMatrix):
-                data, aer_state = AerDensityMatrix._from_ndarray(np.array(data.data,
-                                                                          dtype=complex), configs)
             elif isinstance(data, AerDensityMatrix):
                 aer_state = data._aer_state
                 if dims is None:
                     dims = data._op_shape._dims_l
                 data = data._data.copy()
+            elif isinstance(data, DensityMatrix):
+                data, aer_state = AerDensityMatrix._from_ndarray(np.array(data.data,
+                                                                          dtype=complex), configs)
             elif hasattr(data, 'to_operator'):
                 # If the data object has a 'to_operator' attribute this is given
                 # higher preference than the 'to_matrix' method for initializing
