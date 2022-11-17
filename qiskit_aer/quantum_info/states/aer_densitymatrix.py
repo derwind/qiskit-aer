@@ -348,6 +348,8 @@ class AerDensityMatrix(DensityMatrix):
             raise QiskitError('Density matrix is not a pure state')
 
         psi = evecs[:, np.argmax(evals)]  # eigenvectors returned in columns.
-        # XXX: The internal representation of psi affects statevector's representation,
-        # so change the ordering of psi to C ordering.
+        # At this point, psi is no longer a contiguous segment in either the C-style or
+        # Fortran-style sense. Passing such data to the C++ layer via pybind11 may generate
+        # unexpected state vector values. Therefore, it should be guaranteed to be
+        # a contiguous segment.
         return AerStatevector(np.ascontiguousarray(psi))
