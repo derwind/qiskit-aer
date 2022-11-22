@@ -26,12 +26,14 @@ from qiskit.circuit import QuantumCircuit, QuantumRegister
 from qiskit.quantum_info.random import random_unitary, random_density_matrix, random_pauli
 from qiskit.quantum_info.states import DensityMatrix, Statevector
 from qiskit.circuit.library import QuantumVolume
+from qiskit.quantum_info import Kraus
 from qiskit.quantum_info.operators.operator import Operator
 from qiskit.quantum_info.operators.symplectic import Pauli, SparsePauliOp
 from qiskit.circuit.library import QFT, HGate
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from test.terra import common
 from qiskit_aer.aererror import AerError
+from qiskit_aer.noise import pauli_error
 from qiskit_aer.quantum_info.states import AerDensityMatrix, AerStatevector
 
 
@@ -137,6 +139,26 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         target = AerDensityMatrix.from_label("000").evolve(Operator(circuit))
         psi = AerDensityMatrix.from_instruction(circuit)
         self.assertEqual(psi, target)
+
+    def test_kraus(self):
+        """Test kraus"""
+        circuit = QuantumCircuit(1)
+        circuit.h(0)
+        circuit.y(0)
+        p_error = 0.5
+        error = pauli_error([('Y', p_error), ('I', 1 - p_error)])
+        circuit.append(Kraus(error).to_instruction(), [0])
+
+        circuit_no_noise = QuantumCircuit(1)
+        circuit_no_noise.h(0)
+        rho0 = AerDensityMatrix.from_label("0").evolve(Operator(circuit_no_noise))
+        circuit_no_noise.y(0)
+        rho1 = AerDensityMatrix.from_label("0").evolve(Operator(circuit_no_noise))
+        # (|+><+| + |-><-|)/2
+        target = AerDensityMatrix((rho0.data + rho1.data)/2)
+
+        psi = AerDensityMatrix.from_instruction(circuit)
+        self.assertTrue(psi == target)
 
     def test_deepcopy(self):
         """Test deep copy"""
