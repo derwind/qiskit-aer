@@ -140,22 +140,23 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         psi = AerDensityMatrix.from_instruction(circuit)
         self.assertEqual(psi, target)
 
-    def test_kraus(self):
+    @data(*list(np.linspace(0, 1, 101)))
+    def test_kraus(self, p_error):
         """Test kraus"""
         circuit = QuantumCircuit(1)
         circuit.h(0)
         circuit.y(0)
-        p_error = 0.5
         error = pauli_error([('Y', p_error), ('I', 1 - p_error)])
         circuit.append(Kraus(error).to_instruction(), [0])
 
         circuit_no_noise = QuantumCircuit(1)
         circuit_no_noise.h(0)
+        circuit_no_noise.y(0)
         rho0 = AerDensityMatrix.from_label("0").evolve(Operator(circuit_no_noise))
         circuit_no_noise.y(0)
         rho1 = AerDensityMatrix.from_label("0").evolve(Operator(circuit_no_noise))
-        # (|+><+| + |-><-|)/2
-        target = AerDensityMatrix((rho0.data + rho1.data)/2)
+        # (1-p_error)|+><+| + p_error|-><-|
+        target = AerDensityMatrix(rho0.data*(1 - p_error) + rho1.data*p_error)
 
         psi = AerDensityMatrix.from_instruction(circuit)
         self.assertTrue(psi == target)
