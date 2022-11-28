@@ -22,6 +22,7 @@ from qiskit.quantum_info.states import Statevector
 from qiskit_aer import AerSimulator
 from .aer_state import AerState
 from ...backends.aerbackend import AerError
+from ...backends.backend_utils import BASIS_GATES
 
 
 class AerStatevector(Statevector):
@@ -115,12 +116,16 @@ class AerStatevector(Statevector):
             qubits = np.arange(self._aer_state.num_qubits)
         else:
             qubits = np.array(qargs)
+        self._aer_state.close()
 
-        aer_state = AerState(**self._aer_state.configuration())
-        aer_state.initialize(self._data, copy=False)
-        samples = aer_state.sample_memory(qubits, shots)
-        aer_state.close()
+        configs = self._aer_state.configuration()
+        if 'seed_simulator' in configs:
+            configs['seed_simulator'] = int(configs['seed_simulator']) + 1
+        self._aer_state = AerState(**configs)
 
+        self._aer_state.initialize(self._data, copy=False)
+        samples = self._aer_state.sample_memory(qubits, shots)
+        self._data = self._aer_state.move_to_ndarray()
         return samples
 
     @staticmethod
@@ -153,6 +158,14 @@ class AerStatevector(Statevector):
         for config_key, config_value in configs.items():
             aer_state.configure(config_key, config_value)
 
+        if 'method' in configs:
+            method = configs['method']
+        else:
+            method = 'statevector'
+            aer_state.configure('method', method)
+
+        basis_gates = BASIS_GATES[method]
+
         aer_state.allocate_qubits(inst.num_qubits)
         num_qubits = inst.num_qubits
 
@@ -165,14 +178,14 @@ class AerStatevector(Statevector):
             aer_state.apply_global_phase(inst.global_phase)
 
         if isinstance(inst, QuantumCircuit):
-            AerStatevector._aer_evolve_circuit(aer_state, inst, range(num_qubits))
+            AerStatevector._aer_evolve_circuit(aer_state, inst, range(num_qubits), basis_gates)
         else:
-            AerStatevector._aer_evolve_instruction(aer_state, inst, range(num_qubits))
+            AerStatevector._aer_evolve_instruction(aer_state, inst, range(num_qubits), basis_gates)
 
         return aer_state.move_to_ndarray(), aer_state
 
     @staticmethod
-    def _aer_evolve_circuit(aer_state, circuit, qubits):
+    def _aer_evolve_circuit(aer_state, circuit, qubits, basis_gates=None):
         """Apply circuit into aer_state"""
         for instruction in circuit.data:
             if instruction.clbits:
@@ -183,63 +196,64 @@ class AerStatevector(Statevector):
             qargs = instruction.qubits
             AerStatevector._aer_evolve_instruction(aer_state, inst,
                                                    [qubits[circuit.find_bit(qarg).index]
-                                                    for qarg in qargs])
+                                                    for qarg in qargs], basis_gates)
 
     @staticmethod
-    def _aer_evolve_instruction(aer_state, inst, qubits):
+    def _aer_evolve_instruction(aer_state, inst, qubits, basis_gates=None):
         """Apply instruction into aer_state"""
-
         params = inst.params
+        applied = True
 
-        def _assert_qubits(expected):
-            if len(qubits) != expected:
-                raise AerError(
-                    f"Cannot apply a {expected}-qubit instruction {inst} to qubits {qubits}"
-                )
-
-        def _assert_params(expected):
-            if len(params) < expected:
-                raise AerError(f"Need {expected} parameters, but actually {len(params)}")
-
-        if inst.name in ['u', 'u3']:
-            _assert_qubits(1)
-            _assert_params(3)
-            aer_state.apply_u(qubits[0], params[0], params[1], params[2])
-        elif inst.name == 'h':
-            _assert_qubits(1)
-            aer_state.apply_h(qubits[0])
-        elif inst.name == 'x':
-            _assert_qubits(1)
-            aer_state.apply_x(qubits[0])
-        elif inst.name == 'cx':
-            _assert_qubits(2)
-            aer_state.apply_cx(qubits[0], qubits[1])
-        elif inst.name == 'y':
-            _assert_qubits(1)
-            aer_state.apply_y(qubits)
-        elif inst.name == 'cy':
-            _assert_qubits(2)
-            aer_state.apply_cy(qubits[0], qubits[1])
-        elif inst.name == 'z':
-            _assert_qubits(1)
-            aer_state.apply_z(qubits)
-        elif inst.name == 'cz':
-            _assert_qubits(2)
-            aer_state.apply_cz(qubits[0], qubits[1])
-        elif inst.name == 'unitary':
-            aer_state.apply_unitary(qubits, inst.params[0])
-        elif inst.name == 'diagonal':
-            aer_state.apply_diagonal(qubits, inst.params[0])
+        if basis_gates and inst.name in basis_gates:
+            if inst.name in ['u3', 'u']:
+                aer_state.apply_u(qubits[0], params[0], params[1], params[2])
+            elif inst.name == 'h':
+                aer_state.apply_h(qubits[0])
+            elif inst.name == 'x':
+                aer_state.apply_x(qubits[0])
+            elif inst.name == 'cx':
+                aer_state.apply_cx(qubits[0], qubits[1])
+            elif inst.name == 'y':
+                aer_state.apply_y(qubits[0])
+            elif inst.name == 'cy':
+                aer_state.apply_cy(qubits[0], qubits[1])
+            elif inst.name == 'z':
+                aer_state.apply_z(qubits[0])
+            elif inst.name == 'cz':
+                aer_state.apply_cz(qubits[0], qubits[1])
+            elif inst.name == 'unitary':
+                aer_state.apply_unitary(qubits, inst.params[0])
+            elif inst.name == 'diagonal':
+                aer_state.apply_diagonal(qubits, inst.params)
+            elif inst.name == 'cu':
+                aer_state.apply_cu(qubits[0], qubits[1], params[0], params[1], params[2], params[3])
+            elif inst.name == 'mcu':
+                aer_state.apply_mcu(qubits[0:len(qubits) - 1], qubits[len(qubits) - 1],
+                                    params[0], params[1], params[2], params[3])
+            elif inst.name in 'mcx':
+                aer_state.apply_mcx(qubits[0:len(qubits) - 1], qubits[len(qubits) - 1])
+            elif inst.name in 'mcy':
+                aer_state.apply_mcy(qubits[0:len(qubits) - 1], qubits[len(qubits) - 1])
+            elif inst.name in 'mcz':
+                aer_state.apply_mcz(qubits[0:len(qubits) - 1], qubits[len(qubits) - 1])
+            elif inst.name == 'id':
+                pass
+            else:
+                applied = False
+        elif inst.name == 'kraus':
+            aer_state.apply_kraus(qubits, inst.params)
         elif inst.name == 'reset':
             aer_state.apply_reset(qubits)
-        elif inst.name in ['barrier', 'id']:
+        elif inst.name == 'barrier':
             pass
         else:
+            applied = False
+
+        if not applied:
             definition = inst.definition
             if definition is inst or definition is None:
-                print(inst.definition)
                 raise AerError('cannot decompose ' + inst.name)
-            AerStatevector._aer_evolve_circuit(aer_state, definition, qubits)
+            AerStatevector._aer_evolve_circuit(aer_state, definition, qubits, basis_gates)
 
     @classmethod
     def from_label(cls, label):

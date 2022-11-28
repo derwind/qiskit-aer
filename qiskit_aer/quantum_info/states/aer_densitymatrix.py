@@ -25,6 +25,7 @@ from qiskit_aer import AerSimulator
 from .aer_statevector import AerStatevector
 from .aer_state import AerState
 from ...backends.aerbackend import AerError
+from ...backends.backend_utils import BASIS_GATES
 
 
 class AerDensityMatrix(DensityMatrix):
@@ -229,6 +230,8 @@ class AerDensityMatrix(DensityMatrix):
         for config_key, config_value in configs.items():
             aer_state.configure(config_key, config_value)
 
+        basis_gates = BASIS_GATES['density_matrix']
+
         aer_state.allocate_qubits(inst.num_qubits)
         num_qubits = inst.num_qubits
 
@@ -241,9 +244,9 @@ class AerDensityMatrix(DensityMatrix):
             aer_state.apply_global_phase(inst.global_phase)
 
         if isinstance(inst, QuantumCircuit):
-            AerStatevector._aer_evolve_circuit(aer_state, inst, range(num_qubits))
+            AerStatevector._aer_evolve_circuit(aer_state, inst, range(num_qubits), basis_gates)
         else:
-            AerStatevector._aer_evolve_instruction(aer_state, inst, range(num_qubits))
+            AerStatevector._aer_evolve_instruction(aer_state, inst, range(num_qubits), basis_gates)
 
         return aer_state.move_to_ndarray(), aer_state
 

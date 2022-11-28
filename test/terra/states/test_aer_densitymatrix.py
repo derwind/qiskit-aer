@@ -26,12 +26,14 @@ from qiskit.circuit import QuantumCircuit, QuantumRegister
 from qiskit.quantum_info.random import random_unitary, random_density_matrix, random_pauli
 from qiskit.quantum_info.states import DensityMatrix, Statevector
 from qiskit.circuit.library import QuantumVolume
+from qiskit.quantum_info import Kraus
 from qiskit.quantum_info.operators.operator import Operator
 from qiskit.quantum_info.operators.symplectic import Pauli, SparsePauliOp
 from qiskit.circuit.library import QFT, HGate
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from test.terra import common
 from qiskit_aer.aererror import AerError
+from qiskit_aer.noise import pauli_error
 from qiskit_aer.quantum_info.states import AerDensityMatrix, AerStatevector
 
 
@@ -137,6 +139,27 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
         target = AerDensityMatrix.from_label("000").evolve(Operator(circuit))
         psi = AerDensityMatrix.from_instruction(circuit)
         self.assertEqual(psi, target)
+
+    @data(*list(np.linspace(0, 1, 101)))
+    def test_kraus(self, p_error):
+        """Test kraus"""
+        circuit = QuantumCircuit(1)
+        circuit.h(0)
+        circuit.y(0)
+        error = pauli_error([('Y', p_error), ('I', 1 - p_error)])
+        circuit.append(Kraus(error).to_instruction(), [0])
+
+        circuit_no_noise = QuantumCircuit(1)
+        circuit_no_noise.h(0)
+        circuit_no_noise.y(0)
+        rho0 = AerDensityMatrix.from_label("0").evolve(Operator(circuit_no_noise))
+        circuit_no_noise.y(0)
+        rho1 = AerDensityMatrix.from_label("0").evolve(Operator(circuit_no_noise))
+        # (1-p_error)|+><+| + p_error|-><-|
+        target = AerDensityMatrix(rho0.data*(1 - p_error) + rho1.data*p_error)
+
+        psi = AerDensityMatrix.from_instruction(circuit)
+        self.assertTrue(psi == target)
 
     def test_deepcopy(self):
         """Test deep copy"""
@@ -770,7 +793,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
     def test_sample_counts_ghz(self):
         """Test sample_counts method for GHZ state"""
 
-        shots = 2000
+        shots = 5000
         threshold = 0.02 * shots
         state = AerDensityMatrix(
             (AerStatevector.from_label("000") + AerStatevector.from_label("111")) / np.sqrt(2)
@@ -803,7 +826,7 @@ class TestAerDensityMatrix(common.QiskitAerTestCase):
 
     def test_sample_counts_w(self):
         """Test sample_counts method for W state"""
-        shots = 3000
+        shots = 6000
         threshold = 0.02 * shots
         state = AerDensityMatrix(
             (
