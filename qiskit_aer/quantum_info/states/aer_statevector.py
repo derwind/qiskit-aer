@@ -201,6 +201,7 @@ class AerStatevector(Statevector):
     @staticmethod
     def _aer_evolve_instruction(aer_state, inst, qubits, basis_gates=None):
         """Apply instruction into aer_state"""
+
         params = inst.params
         applied = True
 
