@@ -963,7 +963,7 @@ class TestAerStatevector(common.QiskitAerTestCase):
     def test_sample_counts_ghz(self):
         """Test sample_counts method for GHZ state"""
 
-        shots = 2000
+        shots = 5000
         threshold = 0.02 * shots
         state = (AerStatevector.from_label("000") + AerStatevector.from_label("111")) / np.sqrt(2)
         state.seed(100)
@@ -994,7 +994,7 @@ class TestAerStatevector(common.QiskitAerTestCase):
 
     def test_sample_counts_w(self):
         """Test sample_counts method for W state"""
-        shots = 3000
+        shots = 6000
         threshold = 0.02 * shots
         state = (
             AerStatevector.from_label("001")
