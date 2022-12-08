@@ -13,8 +13,6 @@
 Integration Tests for AerStatevector
 """
 
-import os
-import sys
 import unittest
 from math import pi
 import numpy as np
@@ -30,17 +28,14 @@ from qiskit.providers.basicaer import QasmSimulatorPy
 from qiskit.quantum_info.random import random_unitary, random_statevector, random_pauli
 from qiskit.quantum_info.states import Statevector
 from qiskit.circuit.library import QuantumVolume
-from qiskit.quantum_info import Kraus
+from qiskit.providers.aer import AerSimulator
 from qiskit.quantum_info.operators.operator import Operator
 from qiskit.quantum_info.operators.symplectic import Pauli, SparsePauliOp
 from qiskit.quantum_info.operators.predicates import matrix_equal
 from qiskit.visualization.state_visualization import numbers_to_latex_terms, state_to_latex
 from qiskit.circuit.library import QFT, HGate
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from test.terra import common
-from qiskit_aer import AerSimulator
 from qiskit_aer.aererror import AerError
-from qiskit_aer.noise import pauli_error, QuantumError
 from qiskit_aer.quantum_info.states import AerStatevector
 
 
@@ -62,7 +57,8 @@ class TestAerStatevector(common.QiskitAerTestCase):
     def test_sample_randomness(self):
         """Test randomness of results of sample_counts """
         circ = QuantumVolume(5, seed=1111)
-        state = AerStatevector(circ)
+
+        state = AerStatevector(circ, seed_simulator=1)
 
         shots = 1024
         counts0 = state.sample_counts(shots, qargs=range(5))
@@ -76,9 +72,42 @@ class TestAerStatevector(common.QiskitAerTestCase):
         counts2 = state.sample_counts(shots, qargs=range(5))
         counts3 = state.sample_counts(shots, qargs=range(5))
 
+        self.assertNotEqual(counts2, counts3)
+
         self.assertNotEqual(counts0, counts2)
         self.assertNotEqual(counts1, counts2)
+
+    def test_sample_with_same_seed(self):
+        """Test randomness of results of sample_counts """
+        circ = QuantumVolume(5, seed=1111)
+
+        state = AerStatevector(circ, seed_simulator=1)
+
+        shots = 1024
+        counts0 = state.sample_counts(shots, qargs=range(5))
+        counts1 = state.sample_counts(shots, qargs=range(5))
+
+        self.assertNotEqual(counts0, counts1)
+
+        state = AerStatevector(circ, seed_simulator=1)
+
+        shots = 1024
+        counts2 = state.sample_counts(shots, qargs=range(5))
+        counts3 = state.sample_counts(shots, qargs=range(5))
+
         self.assertNotEqual(counts2, counts3)
+        self.assertEqual(counts0, counts2)
+        self.assertEqual(counts1, counts3)
+
+        shots = 1024
+        state.seed(1)
+        counts4 = state.sample_counts(shots, qargs=range(5))
+        counts5 = state.sample_counts(shots, qargs=range(5))
+
+        self.assertNotEqual(counts4, counts5)
+        self.assertEqual(counts0, counts4)
+        self.assertEqual(counts1, counts5)
+
 
     def test_method_and_device_properties(self):
         """Test method and device properties"""
@@ -260,108 +289,6 @@ class TestAerStatevector(common.QiskitAerTestCase):
         target = AerStatevector.from_label("000").evolve(Operator(circuit))
         psi = AerStatevector.from_instruction(circuit)
         self.assertEqual(psi, target)
-
-    def test_x(self):
-        """Test x"""
-        circuit = QuantumCircuit(3)
-        circuit.h(0)
-        circuit.x(1)
-        target = AerStatevector.from_label("000").evolve(Operator(circuit))
-        psi = AerStatevector.from_instruction(circuit)
-        self.assertEqual(psi, target)
-
-    def test_cx(self):
-        """Test cx"""
-        circuit = QuantumCircuit(3)
-        circuit.h(0)
-        circuit.cx(0, 1)
-        target = AerStatevector.from_label("000").evolve(Operator(circuit))
-        psi = AerStatevector.from_instruction(circuit)
-        self.assertEqual(psi, target)
-
-    def test_y(self):
-        """Test y"""
-        circuit = QuantumCircuit(3)
-        circuit.h(0)
-        circuit.y(1)
-        target = AerStatevector.from_label("000").evolve(Operator(circuit))
-        psi = AerStatevector.from_instruction(circuit)
-        self.assertEqual(psi, target)
-
-    def test_cy(self):
-        """Test cy"""
-        circuit = QuantumCircuit(3)
-        circuit.h(0)
-        circuit.cy(0, 1)
-        target = AerStatevector.from_label("000").evolve(Operator(circuit))
-        psi = AerStatevector.from_instruction(circuit)
-        self.assertEqual(psi, target)
-
-    def test_z(self):
-        """Test z"""
-        circuit = QuantumCircuit(3)
-        circuit.h(0)
-        circuit.z(0)
-        target = AerStatevector.from_label("000").evolve(Operator(circuit))
-        psi = AerStatevector.from_instruction(circuit)
-        self.assertEqual(psi, target)
-
-    def test_cz(self):
-        """Test cz"""
-        circuit = QuantumCircuit(3)
-        circuit.h(0)
-        circuit.cz(0, 1)
-        target = AerStatevector.from_label("000").evolve(Operator(circuit))
-        psi = AerStatevector.from_instruction(circuit)
-        self.assertEqual(psi, target)
-
-    def test_unitary(self):
-        """Test unitary"""
-        circuit = QuantumCircuit(3)
-        mat = random_unitary(8).data
-        circuit.unitary(mat, range(3))
-        target = AerStatevector.from_label("000").evolve(Operator(circuit))
-        psi = AerStatevector.from_instruction(circuit)
-        self.assertEqual(psi, target)
-
-    def test_diagonal(self):
-        """Test diagonal"""
-        circuit = QuantumCircuit(3)
-        circuit.h(range(3))
-        diagonal = [ 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0 ]
-        circuit.diagonal(diagonal, list(range(3)))
-        target = AerStatevector.from_label("000").evolve(Operator(circuit))
-        psi = AerStatevector.from_instruction(circuit)
-        self.assertEqual(psi, target)
-
-    def test_kraus(self):
-        """Test kraus"""
-
-        def same_1qubit_statevectors_up_to_global_phase(sv1, sv2):
-            if not isinstance(sv1, np.ndarray):
-                sv1 = sv1.data
-            if not isinstance(sv2, np.ndarray):
-                sv2 = sv2.data
-            return np.isclose(np.cross(sv1, sv2), 0)
-
-        circuit = QuantumCircuit(1)
-        circuit.h(0)
-        circuit.y(0)
-        p_error = 0.5
-        error = pauli_error([('Y', p_error), ('I', 1 - p_error)])
-        circuit.append(Kraus(error).to_instruction(), [0])
-
-        circuit_no_noise = QuantumCircuit(1)
-        circuit_no_noise.h(0)
-        circuit_no_noise.y(0)
-        target0 = AerStatevector.from_label("0").evolve(Operator(circuit_no_noise))
-        circuit_no_noise.y(0)
-        target1 = AerStatevector.from_label("0").evolve(Operator(circuit_no_noise))
-
-        for i in range(100):
-            psi = AerStatevector.from_instruction(circuit)
-            self.assertTrue(same_1qubit_statevectors_up_to_global_phase(psi, target0) or \
-                            same_1qubit_statevectors_up_to_global_phase(psi, target1))
 
     def test_deepcopy(self):
         """Test deep copy"""
@@ -963,7 +890,7 @@ class TestAerStatevector(common.QiskitAerTestCase):
     def test_sample_counts_ghz(self):
         """Test sample_counts method for GHZ state"""
 
-        shots = 5000
+        shots = 2000
         threshold = 0.02 * shots
         state = (AerStatevector.from_label("000") + AerStatevector.from_label("111")) / np.sqrt(2)
         state.seed(100)
@@ -994,7 +921,7 @@ class TestAerStatevector(common.QiskitAerTestCase):
 
     def test_sample_counts_w(self):
         """Test sample_counts method for W state"""
-        shots = 6000
+        shots = 3000
         threshold = 0.02 * shots
         state = (
             AerStatevector.from_label("001")
