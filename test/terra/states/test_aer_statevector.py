@@ -1321,7 +1321,7 @@ class TestAerStatevector(common.QiskitAerTestCase):
         sv = AerStatevector.from_instruction(qc1)
         with self.subTest(msg="str(statevector)"):
             str(sv)
-        for drawtype in ["repr", "text", "latex", "latex_source", "hinton", "bloch"]:
+        for drawtype in ["repr", "text", "latex", "latex_source", "qsphere", "hinton", "bloch"]:
             with self.subTest(msg=f"draw('{drawtype}')"):
                 sv.draw(drawtype)
         with self.subTest(msg=" draw('latex', convention='vector')"):

@@ -90,6 +90,7 @@ jobs:
     env:
       AER_THRUST_BACKEND: OMP
       QISKIT_TEST_CAPTURE_STREAMS: 1
+      JUPYTER_PLATFORM_DIRS: 1
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
